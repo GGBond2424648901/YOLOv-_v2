@@ -1,0 +1,3922 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLOv智能标注工具</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1600px; /* 扩大最大宽度 */
+            margin: 0 auto;
+            padding: 15px; /* 减少padding */
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px; /* 减少margin */
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.2rem; /* 稍微减小字体 */
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.0rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px; /* 稍微扩大侧边栏 */
+            gap: 15px; /* 减少间距 */
+            height: calc(100vh - 120px); /* 减少顶部空间 */
+            max-width: 1600px; /* 扩大最大宽度 */
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+            position: relative; /* 添加相对定位 */
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            overflow-y: auto;
+        }
+
+        .center-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 15px; /* 减少padding */
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            display: flex;
+            flex-direction: column;
+            position: relative; /* 确保相对定位 */
+            min-width: 0; /* 防止flex收缩问题 */
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #4a5568;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            background: #f8fafc;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #edf2f7;
+            transform: translateY(-2px);
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e6fffa;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #a0aec0;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .canvas-container {
+            width: 100%; /* 固定宽度为容器100% */
+            height: 650px; /* 增加固定高度 */
+            min-height: 650px; /* 最小高度 */
+            max-height: 650px; /* 最大高度 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f8fafc;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            flex-shrink: 0; /* 防止flex容器收缩 */
+            flex-grow: 0; /* 防止flex容器增长 */
+            margin: 0; /* 确保没有外边距 */
+        }
+
+        #annotationCanvas {
+            max-width: calc(100% - 20px); /* 留出边距 */
+            max-height: calc(100% - 20px); /* 留出边距 */
+            cursor: crosshair;
+            border-radius: 8px;
+            object-fit: contain; /* 保持宽高比，完全显示在容器内 */
+            display: block; /* 确保块级显示 */
+        }
+
+        #videoPlayer {
+            max-width: calc(100% - 20px); /* 留出边距 */
+            max-height: calc(100% - 20px); /* 留出边距 */
+            border-radius: 8px;
+            object-fit: contain; /* 保持宽高比，完全显示在容器内 */
+            display: block; /* 确保块级显示 */
+        }
+
+        #placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .model-info {
+            background: #e6fffa;
+            border: 1px solid #81e6d9;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .model-info.loaded {
+            background: #f0fff4;
+            border-color: #9ae6b4;
+        }
+
+        .model-info h4 {
+            color: #234e52;
+            margin-bottom: 5px;
+        }
+
+        .class-list-container {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 5px;
+            background: #f8fafc;
+        }
+
+        .class-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 8px;
+            background: #fff;
+            border-radius: 6px;
+            margin-bottom: 3px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .class-item:hover {
+            background: #f0f4ff;
+            transform: translateX(2px);
+        }
+
+        .class-item.selected {
+            background: #e6f3ff;
+            border-left-color: #4299e1;
+            box-shadow: 0 2px 4px rgba(66, 153, 225, 0.2);
+        }
+
+        .class-item input[type="checkbox"] {
+            margin-right: 8px;
+            transform: scale(1.1);
+        }
+
+        .class-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .class-name {
+            flex: 1;
+            margin: 0 10px;
+            font-weight: 500;
+        }
+
+        .class-count {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .annotation-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+
+        .annotation-item:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+
+        .annotation-details {
+            flex: 1;
+        }
+
+        .annotation-class {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .annotation-confidence {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        .annotation-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-sm {
+            padding: 5px 8px;
+            font-size: 12px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-ready {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-processing {
+            background: #feebc8;
+            color: #744210;
+        }
+
+        .status-error {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .video-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        #videoPlayer {
+            width: 100%;
+            max-height: 400px;
+            border-radius: 8px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .batch-controls {
+            background: #f0f8ff;
+            border: 1px solid #b8daff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .export-options {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: #48bb78;
+        }
+
+        .notification.error {
+            background: #f56565;
+        }
+
+        .notification.info {
+            background: #4299e1;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto 1fr;
+            }
+            
+            .sidebar {
+                height: auto;
+            }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .drag-active {
+            border-color: #667eea !important;
+            background: #e6f3ff !important;
+        }
+        
+        /* 图片列表样式 */
+        .image-list-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background: #fff;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .image-list-item:hover {
+            background: #f0f4ff;
+            border-color: #667eea;
+            transform: translateX(2px);
+        }
+        
+        .image-list-item.active {
+            background: #e6f3ff;
+            border-color: #4299e1;
+            box-shadow: 0 2px 4px rgba(66, 153, 225, 0.2);
+        }
+        
+        .image-list-item.annotated {
+            border-left: 3px solid #48bb78;
+        }
+        
+        .image-status-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 2px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            flex-shrink: 0;
+            background: #fff;
+            font-size: 12px;
+        }
+        
+        .image-status-icon.annotated {
+            background: #48bb78;
+            border-color: #48bb78;
+            color: white;
+        }
+        
+        .image-list-filename {
+            flex: 1;
+            font-size: 11px;
+            color: #4a5568;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+        
+        .image-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .image-list-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .image-list-container::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 3px;
+        }
+        
+        .image-list-container::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-eye"></i> YOLOv智能标注工具 
+                <span style="font-size: 0.5em; color: #667eea; cursor: pointer;" onclick="showVersionInfo()">v2.0</span>
+            </h1>
+            <p>上传模型，自动标注图片和视频，导出训练数据 
+                <span style="font-size: 0.8em; color: #888; margin-left: 10px;">
+                    按 <kbd>H</kbd> 查看快捷键
+                </span>
+            </p>
+        </div>
+
+        <div class="main-content">
+            <!-- 左侧栏 - 模型和设置 -->
+            <div class="sidebar">
+                <div class="section-title">
+                    <i class="fas fa-brain"></i>
+                    模型管理
+                </div>
+                
+                <div class="model-tabs" style="margin-bottom: 15px;">
+                    <button class="btn btn-sm" id="uploadTab" onclick="switchModelTab('upload')" style="margin-right: 5px;">
+                        <i class="fas fa-upload"></i> 上传模型
+                    </button>
+                    <button class="btn btn-sm btn-secondary" id="existingTab" onclick="switchModelTab('existing')">
+                        <i class="fas fa-folder"></i> 选择现有模型
+                    </button>
+                </div>
+
+                <div id="uploadModelPanel">
+                    <div class="upload-area" onclick="document.getElementById('modelFile').click()">
+                        <div class="upload-icon">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <p>点击或拖拽上传YOLOv模型</p>
+                        <small>支持 .pt 文件格式</small>
+                    </div>
+                    <input type="file" id="modelFile" accept=".pt" style="display: none;">
+                </div>
+
+                <div id="existingModelPanel" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">选择模型文件</label>
+                        <select class="form-control" id="existingModelSelect">
+                            <option value="">加载中...</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary" onclick="loadExistingModel()" id="loadModelBtn" disabled>
+                        <i class="fas fa-download"></i>
+                        加载选中模型
+                    </button>
+                    <button class="btn btn-sm" onclick="refreshModelList()" style="margin-left: 5px;">
+                        <i class="fas fa-sync"></i>
+                    </button>
+                </div>
+
+                <div class="model-info" id="modelInfo" style="display: none;">
+                    <h4><i class="fas fa-check-circle"></i> 模型已加载</h4>
+                    <p id="modelDetails">等待加载...</p>
+                    <div class="status-indicator status-ready">
+                        <i class="fas fa-circle"></i>
+                        就绪
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">置信度阈值</label>
+                    <input type="range" class="form-control" id="confidenceThreshold" 
+                           min="0.1" max="1.0" step="0.05" value="0.5">
+                    <small id="confidenceValue">0.5</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">IoU阈值</label>
+                    <input type="range" class="form-control" id="iouThreshold" 
+                           min="0.1" max="1.0" step="0.05" value="0.45">
+                    <small id="iouValue">0.45</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">输入尺寸</label>
+                    <select class="form-control" id="inputSize">
+                        <option value="640">640x640</option>
+                        <option value="320">320x320</option>
+                        <option value="416">416x416</option>
+                        <option value="512">512x512</option>
+                        <option value="1280">1280x1280</option>
+                    </select>
+                </div>
+
+                <div class="batch-controls">
+                    <h4><i class="fas fa-layer-group"></i> 批量处理</h4>
+                    
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <button class="btn btn-secondary" onclick="selectBatchFiles()" style="flex: 1; min-width: 120px;">
+                            <i class="fas fa-images"></i>
+                            选择文件
+                        </button>
+                        
+                        <button class="btn btn-secondary" onclick="selectBatchFolder()" style="flex: 1; min-width: 120px;">
+                            <i class="fas fa-folder-open"></i>
+                            选择文件夹
+                        </button>
+                    </div>
+                    
+                    <!-- 不轮播选项 -->
+                    <div class="form-group" style="margin: 10px 0;">
+                        <label class="form-label" style="font-size: 12px; display: flex; align-items: center;">
+                            <input type="checkbox" id="noCarouselMode" style="margin-right: 8px;">
+                            <span>静默批量检测（不轮播图片）</span>
+                        </label>
+                        <small style="color: #666; font-size: 11px; display: block; margin-left: 24px;">
+                            💡 勾选后批量检测时不自动切换图片，只显示进度
+                        </small>
+                    </div>
+                    
+                    <button class="btn btn-warning" onclick="processBatch()" id="batchProcessBtn" disabled>
+                        <i class="fas fa-play"></i>
+                        一键检测全部
+                    </button>
+                    
+                    <!-- 批量处理进度区域 -->
+                    <div class="batch-progress-container" style="margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <small id="batchStatus">等待选择文件</small>
+                            <span id="batchPercentage" style="font-weight: bold; color: #667eea;">0%</span>
+                        </div>
+                        
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="batchProgress" style="width: 0%"></div>
+                        </div>
+                        
+                        <div id="batchStats" style="margin-top: 10px; display: none;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+                                <div>
+                                    <span style="color: #48bb78;">✓ 已处理: </span>
+                                    <span id="processedCount">0</span>
+                                </div>
+                                <div>
+                                    <span style="color: #4299e1;">📊 检测到: </span>
+                                    <span id="detectedCount">0</span>
+                                </div>
+                                <div>
+                                    <span style="color: #ed8936;">⏳ 剩余: </span>
+                                    <span id="remainingCount">0</span>
+                                </div>
+                                <div>
+                                    <span style="color: #f56565;">❌ 无目标: </span>
+                                    <span id="emptyCount">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中央面板 - 图像显示和标注 -->
+            <div class="center-panel">
+                <div class="toolbar">
+                    <div class="upload-area" style="flex: 1; padding: 15px; margin: 0;" 
+                         onclick="document.getElementById('mediaFile').click()">
+                        <i class="fas fa-image"></i>
+                        选择图片或视频
+                    </div>
+                    <input type="file" id="mediaFile" accept="image/*,video/*" multiple style="display: none;">
+                    
+                    <button class="btn" onclick="autoAnnotate()" id="autoAnnotateBtn" disabled>
+                        <i class="fas fa-magic"></i>
+                        自动标注
+                    </button>
+                    
+                    <button class="btn btn-secondary" onclick="clearAnnotations()">
+                        <i class="fas fa-eraser"></i>
+                        清除当前标注
+                    </button>
+                    
+                    <button class="btn btn-secondary" onclick="clearAllAnnotations()">
+                        <i class="fas fa-trash"></i>
+                        清除全部标注
+                    </button>
+                    
+                    <button class="btn btn-sm btn-danger" onclick="deleteCurrentFile()" title="删除当前文件">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    
+                    <button class="btn btn-sm btn-warning" onclick="clearCurrentSession()" title="清除当前上传的所有文件">
+                        <i class="fas fa-folder-minus"></i> 清除当前
+                    </button>
+                    
+                    <button class="btn btn-sm btn-danger" onclick="clearAllUploads()" title="清除uploads文件夹所有文件">
+                        <i class="fas fa-trash-alt"></i> 清空文件夹
+                    </button>
+                    
+                    <button class="btn btn-sm" onclick="showShortcutsHelp()" title="快捷键帮助 (H)">
+                        <i class="fas fa-keyboard"></i>
+                    </button>
+                </div>
+
+                <!-- 图片浏览器控制栏 -->
+                <div class="image-browser-controls" id="imageBrowserControls" style="display: none;">
+                    <!-- 上方按钮区域重新设计 -->
+                    <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        
+                        <!-- 第一行：导航和信息 -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button class="btn btn-sm" onclick="previousImage()" id="prevBtn" disabled style="min-width: 80px;">
+                                    <i class="fas fa-chevron-left"></i> 上一张
+                                </button>
+                                <button class="btn btn-sm" onclick="nextImage()" id="nextBtn" disabled style="min-width: 80px;">
+                                    下一张 <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span id="imageInfo" style="font-size: 14px; color: #4a5568; font-weight: 500;"></span>
+                                <div class="progress-bar" style="width: 180px; height: 8px; margin: 0;">
+                                    <div class="progress-fill" id="imageProgress" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-danger" onclick="deleteAllFiles()" id="deleteAllBtn" style="min-width: 100px;">
+                                <i class="fas fa-trash-alt"></i> 删除全部
+                            </button>
+                        </div>
+                        
+                        <!-- 第二行：功能按钮 -->
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+                            <button class="btn btn-secondary" onclick="autoAnnotateAll()" id="autoAnnotateAllBtn" disabled style="min-width: 140px;">
+                                <i class="fas fa-magic"></i> 一键检测全部
+                            </button>
+                            
+                            <!-- 暂停/继续按钮（默认隐藏） -->
+                            <button class="btn btn-warning" onclick="pauseResumeDetection()" id="pauseResumeBtn" style="min-width: 100px; display: none;">
+                                <i class="fas fa-pause"></i> 暂停
+                            </button>
+                            
+                            <button class="btn btn-warning" onclick="clearAllAnnotations()" style="min-width: 120px;">
+                                <i class="fas fa-eraser"></i> 清除标注
+                            </button>
+                            
+                            <button class="btn" onclick="exportDataset()" style="min-width: 120px;">
+                                <i class="fas fa-download"></i> 导出数据集
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="canvas-container">
+                    <canvas id="annotationCanvas"></canvas>
+                    <video id="videoPlayer" controls style="display: none;"></video>
+                    <div id="placeholder" style="text-align: center; color: #a0aec0;">
+                        <i class="fas fa-image" style="font-size: 4rem; margin-bottom: 20px;"></i>
+                        <p style="font-size: 1.2rem;">请上传图片或视频开始标注</p>
+                    </div>
+                </div>
+
+                <!-- 视频控制面板 -->
+                <div class="video-controls hidden" id="videoControls">
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                        <button class="btn btn-sm" onclick="extractFrame()">
+                            <i class="fas fa-camera"></i>
+                            提取当前帧
+                        </button>
+                        
+                        <button class="btn btn-sm btn-warning" onclick="showVideoExtractDialog()">
+                            <i class="fas fa-film"></i>
+                            批量提取帧
+                        </button>
+                        
+                        <button class="btn btn-sm btn-secondary" onclick="autoAnnotateVideo()">
+                            <i class="fas fa-video"></i>
+                            标注视频
+                        </button>
+                        
+                        <span style="margin-left: auto;">当前时间: <span id="currentTime">00:00</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧栏 - 类别和标注管理 -->
+            <div class="sidebar">
+                <!-- 图片列表区域 -->
+                <div class="image-list-section" id="imageListSection" style="display: none; margin-bottom: 15px;">
+                    <div class="section-title">
+                        <i class="fas fa-images"></i>
+                        图片列表
+                        <span id="imageListCount" style="font-size: 11px; color: #667eea; margin-left: 8px;">0张</span>
+                    </div>
+                    
+                    <div class="image-list-container" id="imageListContainer" style="max-height: 250px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 5px;">
+                        <p style="color: #a0aec0; text-align: center; padding: 20px; font-size: 12px;">
+                            上传图片后显示列表
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="section-title">
+                    <i class="fas fa-tags"></i>
+                    检测类别
+                    <button class="btn btn-sm" onclick="toggleSelectAll()" style="margin-left: auto; font-size: 10px; padding: 3px 8px;">
+                        全选/取消
+                    </button>
+                </div>
+                
+                <div class="class-controls" style="margin-bottom: 10px;">
+                    <button class="btn btn-sm btn-secondary" onclick="selectCommonClasses()" style="font-size: 10px; padding: 3px 8px; margin-right: 5px;">
+                        <i class="fas fa-user"></i> 常用类别
+                    </button>
+                    <span style="font-size: 11px; color: #666;">已选: <span id="selectedCount">0</span></span>
+                </div>
+                
+                <div id="classList" class="class-list-container">
+                    <p style="color: #a0aec0; text-align: center; padding: 20px;">
+                        加载模型后显示类别
+                    </p>
+                </div>
+
+                <!-- 手动标注模式设置 -->
+                <div style="margin-top: 15px;">
+                    <label class="form-label">
+                        <i class="fas fa-draw-polygon"></i>
+                        标注模式
+                    </label>
+                    <select id="annotationMode" class="form-control">
+                        <option value="rectangle">矩形框标注</option>
+                        <option value="polygon">多边形分割标注</option>
+                    </select>
+                    <small style="color: #666; font-size: 11px; margin-top: 5px; display: block;">
+                        多边形模式：点击添加点，双击或按Enter完成
+                    </small>
+                </div>
+
+                <!-- 手动标注类型设置 -->
+                <div style="margin-top: 15px;">
+                    <label class="form-label">
+                        <i class="fas fa-pencil-alt"></i>
+                        手动标注类型
+                    </label>
+                    <input id="manualAnnotationClass" class="form-control" 
+                           list="classOptions" 
+                           placeholder="输入或选择类别" 
+                           disabled
+                           value="person">
+                    <datalist id="classOptions">
+                        <option value="person">person</option>
+                    </datalist>
+                    <small style="color: #666; font-size: 11px; margin-top: 5px; display: block;">
+                        可输入自定义类别或从下拉列表选择现有类别
+                    </small>
+                </div>
+
+                <div class="section-title" style="margin-top: 30px;">
+                    <i class="fas fa-list"></i>
+                    当前标注
+                </div>
+                
+                <div id="annotationList">
+                    <p style="color: #a0aec0; text-align: center; padding: 20px;">
+                        暂无标注
+                    </p>
+                </div>
+
+                <!-- 检测统计信息区域 -->
+                <div id="detectionStatistics" style="display: none; margin-top: 15px;">
+                    <div class="section-title" style="margin-top: 0;">
+                        <i class="fas fa-chart-bar"></i>
+                        检测统计
+                    </div>
+                    <div style="background: #f0f8ff; border: 1px solid #b8daff; border-radius: 8px; padding: 12px; font-size: 13px;">
+                        <div id="statisticsContent"></div>
+                    </div>
+                </div>
+
+                <div class="export-options">
+                    <h4><i class="fas fa-download"></i> 导出选项</h4>
+                    
+                    <div class="form-group">
+                        <label class="form-label">导出格式</label>
+                        <select class="form-control" id="exportFormat">
+                            <option value="yolo_json">YOLO JSON</option>
+                            <option value="coco_json">COCO JSON</option>
+                            <option value="yolo_txt">YOLO TXT</option>
+                            <option value="pascal_voc">Pascal VOC</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-secondary" onclick="exportAnnotations()" id="exportBtn" disabled>
+                        <i class="fas fa-file-export"></i>
+                        导出当前标注
+                    </button>
+                    
+                    <div style="margin: 15px 0; padding: 10px; background: #f0fff4; border: 1px solid #9ae6b4; border-radius: 6px;">
+                        <h5 style="margin-bottom: 10px; color: #22543d;">
+                            <i class="fas fa-database"></i> 完整数据集导出
+                        </h5>
+                        
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <label class="form-label" style="font-size: 12px;">数据集名称</label>
+                            <input type="text" class="form-control" id="datasetName" value="my_yolo_dataset" style="font-size: 12px;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <label class="form-label" style="font-size: 12px;">
+                                <input type="checkbox" id="includeImages" checked style="margin-right: 5px;">
+                                包含图片文件
+                            </label>
+                        </div>
+                        
+                        <button class="btn btn-warning" onclick="exportDataset()" style="width: 100%; font-size: 12px; padding: 8px;">
+                            <i class="fas fa-archive"></i>
+                            导出完整数据集 (ZIP)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 隐藏的元素 -->
+    <input type="file" id="batchFiles" multiple accept="image/*,video/*" style="display: none;">
+    <input type="file" id="batchFolder" webkitdirectory directory multiple style="display: none;">
+
+    <script>
+        // 全局变量
+        const API_BASE_URL = window.location.origin + '/api';
+        let currentModel = null;
+        let currentImage = null;
+        let currentVideo = null;
+        let annotations = [];
+        let classes = [];
+        let colors = [];
+        let batchFiles = [];
+        let canvas, ctx;
+        let isDrawing = false;
+        let startX, startY;
+        let currentSessionId = null;
+        let currentFilename = null;
+        let selectedClassIds = [];  // 选择的类别ID列表
+        let uploadedFiles = [];  // 上传的文件列表
+        let currentFileIndex = 0;  // 当前文件索引
+        let batchProcessStats = {
+            processed: 0,
+            detected: 0,
+            empty: 0,
+            total: 0
+        };
+        
+        // 多边形标注相关变量
+        let annotationMode = 'rectangle';  // 'rectangle' 或 'polygon'
+        let polygonPoints = [];  // 当前多边形的点
+        let isDrawingPolygon = false;  // 是否正在绘制多边形
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            canvas = document.getElementById('annotationCanvas');
+            ctx = canvas.getContext('2d');
+            initializeEventListeners();
+            generateColors();
+            checkServerHealth();
+            refreshModelList();
+        });
+
+        // 生成随机颜色
+        function generateColors() {
+            const colorPalette = [
+                '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
+                '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43',
+                '#10AC84', '#EE5A24', '#0652DD', '#9980FA', '#EA2027'
+            ];
+            colors = colorPalette;
+        }
+
+        // 初始化事件监听器
+        function initializeEventListeners() {
+            // 文件上传
+            document.getElementById('modelFile').addEventListener('change', handleModelUpload);
+            document.getElementById('mediaFile').addEventListener('change', handleMediaUpload);
+            document.getElementById('batchFiles').addEventListener('change', handleBatchFiles);
+            document.getElementById('batchFolder').addEventListener('change', handleBatchFiles);
+
+            // 滑块更新
+            document.getElementById('confidenceThreshold').addEventListener('input', function() {
+                document.getElementById('confidenceValue').textContent = this.value;
+            });
+            
+            document.getElementById('iouThreshold').addEventListener('input', function() {
+                document.getElementById('iouValue').textContent = this.value;
+            });
+
+            // 标注模式切换
+            document.getElementById('annotationMode').addEventListener('change', function() {
+                annotationMode = this.value;
+                // 切换模式时重置多边形状态
+                if (annotationMode === 'polygon') {
+                    isDrawing = false;
+                    polygonPoints = [];
+                    isDrawingPolygon = false;
+                    showNotification('多边形模式：点击画布添加点，双击或按Enter完成', 'info');
+                } else {
+                    polygonPoints = [];
+                    isDrawingPolygon = false;
+                    showNotification('矩形框模式：拖拽画布绘制矩形', 'info');
+                }
+                redrawCanvas();
+            });
+
+            // 拖拽上传
+            setupDragAndDrop();
+
+            // Canvas绘图事件
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('click', handleCanvasClick);
+            canvas.addEventListener('dblclick', finishPolygon);
+
+            // 视频时间更新
+            document.getElementById('videoPlayer').addEventListener('timeupdate', updateVideoTime);
+
+            // 键盘快捷键
+            document.addEventListener('keydown', handleKeyDown);
+        }
+
+        // 设置拖拽上传
+        function setupDragAndDrop() {
+            const uploadAreas = document.querySelectorAll('.upload-area');
+            
+            uploadAreas.forEach(area => {
+                area.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    this.classList.add('dragover');
+                });
+
+                area.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('dragover');
+                });
+
+                area.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    this.classList.remove('dragover');
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        if (this.onclick.toString().includes('modelFile')) {
+                            handleModelFile(files[0]);
+                        } else {
+                            handleMediaFiles(files);
+                        }
+                    }
+                });
+            });
+        }
+
+        // 检查服务器健康状态
+        function checkServerHealth() {
+            fetch(`${API_BASE_URL}/health`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        showNotification('服务器连接正常', 'success');
+                        if (data.model_loaded) {
+                            loadModelInfo();
+                        }
+                    }
+                })
+                .catch(error => {
+                    showNotification('无法连接到服务器，请检查后端服务是否启动', 'error');
+                    console.error('Health check failed:', error);
+                });
+        }
+
+        // 加载模型信息
+        function loadModelInfo() {
+            fetch(`${API_BASE_URL}/model_info`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.log('No model loaded');
+                        return;
+                    }
+                    currentModel = data;
+                    classes = data.classes;
+                    updateModelInfo();
+                    updateClassList();
+                    document.getElementById('autoAnnotateBtn').disabled = false;
+                })
+                .catch(error => {
+                    console.error('Failed to load model info:', error);
+                });
+        }
+
+        // 切换模型选择标签
+        function switchModelTab(tab) {
+            const uploadTab = document.getElementById('uploadTab');
+            const existingTab = document.getElementById('existingTab');
+            const uploadPanel = document.getElementById('uploadModelPanel');
+            const existingPanel = document.getElementById('existingModelPanel');
+
+            if (tab === 'upload') {
+                uploadTab.classList.remove('btn-secondary');
+                existingTab.classList.add('btn-secondary');
+                uploadPanel.style.display = 'block';
+                existingPanel.style.display = 'none';
+            } else {
+                uploadTab.classList.add('btn-secondary');
+                existingTab.classList.remove('btn-secondary');
+                uploadPanel.style.display = 'none';
+                existingPanel.style.display = 'block';
+                refreshModelList();
+            }
+        }
+
+        // 刷新模型列表
+        function refreshModelList() {
+            const select = document.getElementById('existingModelSelect');
+            select.innerHTML = '<option value="">加载中...</option>';
+            
+            fetch(`${API_BASE_URL}/list_models`)
+                .then(response => response.json())
+                .then(data => {
+                    select.innerHTML = '<option value="">请选择模型文件</option>';
+                    
+                    if (data.models && data.models.length > 0) {
+                        data.models.forEach(model => {
+                            const option = document.createElement('option');
+                            option.value = model.filename;
+                            option.textContent = `${model.filename} (${model.size_mb})`;
+                            select.appendChild(option);
+                        });
+                    } else {
+                        select.innerHTML = '<option value="">没有找到模型文件</option>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to load model list:', error);
+                    select.innerHTML = '<option value="">加载失败</option>';
+                });
+        }
+
+        // 加载现有模型
+        function loadExistingModel() {
+            const select = document.getElementById('existingModelSelect');
+            const filename = select.value;
+            
+            if (!filename) {
+                showNotification('请先选择模型文件', 'error');
+                return;
+            }
+
+            showNotification('正在加载模型...', 'info');
+
+            fetch(`${API_BASE_URL}/load_existing_model`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ filename: filename })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showNotification(data.error, 'error');
+                    return;
+                }
+
+                currentModel = data.model_info;
+                classes = data.model_info.classes;
+                updateModelInfo();
+                updateClassList();
+                
+                document.getElementById('autoAnnotateBtn').disabled = false;
+                updateBatchStatus(); // 更新批量处理按钮状态
+                showNotification('模型加载成功！', 'success');
+            })
+            .catch(error => {
+                showNotification('模型加载失败: ' + error.message, 'error');
+                console.error('Model loading failed:', error);
+            });
+        }
+
+        // 监听模型选择变化
+        document.addEventListener('DOMContentLoaded', function() {
+            const select = document.getElementById('existingModelSelect');
+            if (select) {
+                select.addEventListener('change', function() {
+                    const loadBtn = document.getElementById('loadModelBtn');
+                    loadBtn.disabled = !this.value;
+                });
+            }
+        });
+
+        // 处理模型上传
+        function handleModelUpload(event) {
+            handleModelFile(event.target.files[0]);
+        }
+
+        function handleModelFile(file) {
+            if (!file.name.endsWith('.pt')) {
+                showNotification('请上传.pt格式的模型文件', 'error');
+                return;
+            }
+
+            showNotification('正在上传并加载模型...', 'info');
+            
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch(`${API_BASE_URL}/upload_model`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showNotification(data.error, 'error');
+                    return;
+                }
+
+                currentModel = data.model_info;
+                classes = data.model_info.classes;
+                updateModelInfo();
+                updateClassList();
+                
+                document.getElementById('autoAnnotateBtn').disabled = false;
+                updateBatchStatus(); // 更新批量处理按钮状态
+                showNotification('模型加载成功！', 'success');
+            })
+            .catch(error => {
+                showNotification('模型上传失败: ' + error.message, 'error');
+                console.error('Model upload failed:', error);
+            });
+        }
+
+        // 更新模型信息
+        function updateModelInfo() {
+            const modelInfo = document.getElementById('modelInfo');
+            const modelDetails = document.getElementById('modelDetails');
+            
+            const size = currentModel.size ? 
+                (currentModel.size / 1024 / 1024).toFixed(2) + ' MB' : 
+                'Unknown';
+            
+            modelDetails.innerHTML = `
+                <strong>文件:</strong> ${currentModel.filename || 'Unknown'}<br>
+                <strong>大小:</strong> ${size}<br>
+                <strong>类别数量:</strong> ${currentModel.num_classes || 0}<br>
+                <strong>模型类型:</strong> ${currentModel.model_type || 'Unknown'}<br>
+                <strong>设备:</strong> ${currentModel.device || 'Unknown'}
+            `;
+            
+            modelInfo.style.display = 'block';
+        }
+
+        // 更新类别列表
+        function updateClassList() {
+            const classList = document.getElementById('classList');
+            const manualClassInput = document.getElementById('manualAnnotationClass');
+            const classOptions = document.getElementById('classOptions');
+            
+            classList.innerHTML = '';
+            
+            if (!classes || classes.length === 0) {
+                classList.innerHTML = '<p style="color: #a0aec0; text-align: center; padding: 20px;">没有类别信息</p>';
+                // 重置手动标注类型选择器
+                classOptions.innerHTML = '<option value="person">person</option>';
+                manualClassInput.value = 'person';
+                manualClassInput.disabled = true;
+                return;
+            }
+            
+            // 默认选择所有类别
+            selectedClassIds = classes.map((_, index) => index);
+            
+            // 更新手动标注类型的datalist选项
+            classOptions.innerHTML = '';
+            classes.forEach((className) => {
+                const option = document.createElement('option');
+                option.value = className;
+                classOptions.appendChild(option);
+            });
+            
+            // 设置默认值为第一个类别
+            manualClassInput.value = classes[0] || 'person';
+            manualClassInput.disabled = false;
+            
+            classes.forEach((className, index) => {
+                const classItem = document.createElement('div');
+                classItem.className = 'class-item selected';
+                classItem.innerHTML = `
+                    <input type="checkbox" id="class-${index}" checked onchange="toggleClass(${index})">
+                    <div class="class-color" style="background: ${colors[index % colors.length]}"></div>
+                    <span class="class-name">${className}</span>
+                    <span class="class-count" id="count-${index}">0</span>
+                `;
+                
+                // 点击整个项目也能切换选择状态
+                classItem.addEventListener('click', function(e) {
+                    if (e.target.type !== 'checkbox') {
+                        const checkbox = classItem.querySelector('input[type="checkbox"]');
+                        checkbox.checked = !checkbox.checked;
+                        toggleClass(index);
+                    }
+                });
+                
+                classList.appendChild(classItem);
+            });
+            
+            updateSelectedCount();
+        }
+
+        // 切换类别选择状态
+        function toggleClass(classId) {
+            const checkbox = document.getElementById(`class-${classId}`);
+            const classItem = checkbox.closest('.class-item');
+            
+            if (checkbox.checked) {
+                if (!selectedClassIds.includes(classId)) {
+                    selectedClassIds.push(classId);
+                }
+                classItem.classList.add('selected');
+            } else {
+                selectedClassIds = selectedClassIds.filter(id => id !== classId);
+                classItem.classList.remove('selected');
+            }
+            
+            updateSelectedCount();
+        }
+
+        // 更新选择数量显示
+        function updateSelectedCount() {
+            const countElement = document.getElementById('selectedCount');
+            if (countElement) {
+                countElement.textContent = selectedClassIds.length;
+            }
+        }
+
+        // 全选/取消全选
+        function toggleSelectAll() {
+            const allSelected = selectedClassIds.length === classes.length;
+            
+            classes.forEach((_, index) => {
+                const checkbox = document.getElementById(`class-${index}`);
+                const classItem = checkbox.closest('.class-item');
+                
+                if (allSelected) {
+                    // 取消全选
+                    checkbox.checked = false;
+                    classItem.classList.remove('selected');
+                } else {
+                    // 全选
+                    checkbox.checked = true;
+                    classItem.classList.add('selected');
+                }
+            });
+            
+            if (allSelected) {
+                selectedClassIds = [];
+            } else {
+                selectedClassIds = classes.map((_, index) => index);
+            }
+            
+            updateSelectedCount();
+        }
+
+        // 选择常用类别
+        function selectCommonClasses() {
+            // 常用类别名称
+            const commonClasses = ['person', 'car', 'bicycle', 'motorcycle', 'bus', 'truck', 'dog', 'cat'];
+            
+            // 清除所有选择
+            selectedClassIds = [];
+            classes.forEach((_, index) => {
+                const checkbox = document.getElementById(`class-${index}`);
+                const classItem = checkbox.closest('.class-item');
+                checkbox.checked = false;
+                classItem.classList.remove('selected');
+            });
+            
+            // 选择常用类别
+            classes.forEach((className, index) => {
+                if (commonClasses.includes(className.toLowerCase())) {
+                    const checkbox = document.getElementById(`class-${index}`);
+                    const classItem = checkbox.closest('.class-item');
+                    checkbox.checked = true;
+                    classItem.classList.add('selected');
+                    selectedClassIds.push(index);
+                }
+            });
+            
+            updateSelectedCount();
+        }
+
+        // 处理媒体文件上传
+        function handleMediaUpload(event) {
+            handleMediaFiles(event.target.files);
+        }
+
+        function handleMediaFiles(files) {
+            if (files.length === 0) return;
+            
+            showNotification('正在上传文件...', 'info');
+            
+            const formData = new FormData();
+            for (let file of files) {
+                formData.append('files', file);
+            }
+
+            fetch(`${API_BASE_URL}/upload_media`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showNotification(data.error, 'error');
+                    return;
+                }
+
+                currentSessionId = data.session_id;
+                uploadedFiles = data.files;
+                currentFileIndex = 0;
+                
+                // 更新图片列表显示
+                updateImageList();
+                
+                // 更新批量处理按钮状态
+                updateBatchStatus();
+                
+                // 加载第一个文件
+                if (data.files && data.files.length > 0) {
+                    loadCurrentFile();
+                    
+                    // 显示图片浏览器控制栏（如果有多个文件）
+                    if (data.files.length > 1) {
+                        showImageBrowser();
+                        updateImageBrowserInfo();
+                    }
+                }
+                
+                showNotification(`成功上传 ${data.files.length} 个文件`, 'success');
+            })
+            .catch(error => {
+                showNotification('文件上传失败: ' + error.message, 'error');
+                console.error('Media upload failed:', error);
+            });
+        }
+
+        // 从服务器加载图片
+        function loadImageFromServer(fileInfo) {
+            const img = new Image();
+            img.onload = function() {
+                currentImage = img;
+                currentVideo = null;
+                
+                // 隐藏视频播放器和控制器
+                document.getElementById('videoPlayer').style.display = 'none';
+                document.getElementById('videoControls').classList.add('hidden');
+                document.getElementById('placeholder').style.display = 'none';
+                
+                // 调整canvas大小
+                resizeCanvas(img.width, img.height);
+                
+                // 绘制图片
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                // 清除之前的标注
+                annotations = [];
+                updateAnnotationList();
+                updateClassCounts();
+                
+                document.getElementById('exportBtn').disabled = false;
+                showNotification('图片加载成功', 'success');
+            };
+            
+            // 使用文件的blob URL或base64数据
+            img.src = `/uploads/${fileInfo.unique_filename}`;
+        }
+
+        // 从服务器加载视频
+        function loadVideoFromServer(fileInfo) {
+            const video = document.getElementById('videoPlayer');
+            video.src = `/uploads/${fileInfo.unique_filename}`;
+            
+            // 设置视频样式以适应固定容器
+            video.style.display = 'block';
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'contain';
+            
+            document.getElementById('videoControls').classList.remove('hidden');
+            document.getElementById('placeholder').style.display = 'none';
+            
+            currentVideo = video;
+            currentImage = null;
+            
+            // 清除canvas
+            canvas.style.display = 'none';
+            
+            showNotification('视频加载成功', 'success');
+        }
+
+        // 加载图片（本地文件）
+        function loadImage(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    currentImage = img;
+                    currentVideo = null;
+                    
+                    // 隐藏视频播放器和控制器
+                    document.getElementById('videoPlayer').style.display = 'none';
+                    document.getElementById('videoControls').classList.add('hidden');
+                    document.getElementById('placeholder').style.display = 'none';
+                    
+                    // 调整canvas大小
+                    resizeCanvas(img.width, img.height);
+                    
+                    // 绘制图片
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // 清除之前的标注
+                    annotations = [];
+                    updateAnnotationList();
+                    
+                    document.getElementById('exportBtn').disabled = false;
+                    showNotification('图片加载成功', 'success');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 加载视频
+        function loadVideo(file) {
+            const video = document.getElementById('videoPlayer');
+            const url = URL.createObjectURL(file);
+            
+            video.src = url;
+            video.style.display = 'block';
+            document.getElementById('videoControls').classList.remove('hidden');
+            document.getElementById('placeholder').style.display = 'none';
+            
+            currentVideo = video;
+            currentImage = null;
+            
+            // 清除canvas
+            canvas.style.display = 'none';
+            
+            showNotification('视频加载成功', 'success');
+        }
+
+        // 调整canvas大小
+        function resizeCanvas(imgWidth, imgHeight) {
+            const container = document.querySelector('.canvas-container');
+            // 使用固定的容器尺寸，减去边距
+            const containerWidth = 650 - 40; // 固定宽度减去边距
+            const containerHeight = 650 - 40; // 固定高度减去边距
+            
+            // 计算缩放比例，确保完全适应固定容器
+            const scale = Math.min(containerWidth / imgWidth, containerHeight / imgHeight);
+            
+            // 设置canvas的实际绘制尺寸
+            canvas.width = imgWidth * scale;
+            canvas.height = imgHeight * scale;
+            
+            // 设置canvas的CSS显示样式，确保在固定容器内居中
+            canvas.style.display = 'block';
+            canvas.style.width = `${imgWidth * scale}px`;
+            canvas.style.height = `${imgHeight * scale}px`;
+            canvas.style.maxWidth = '610px'; // 固定最大宽度
+            canvas.style.maxHeight = '610px'; // 固定最大高度
+            canvas.style.objectFit = 'contain';
+            canvas.style.margin = 'auto';
+            canvas.style.position = 'absolute';
+            canvas.style.top = '50%';
+            canvas.style.left = '50%';
+            canvas.style.transform = 'translate(-50%, -50%)';
+        }
+
+        // 自动标注
+        function autoAnnotate() {
+            if (!currentModel) {
+                showNotification('请先上传模型', 'error');
+                return;
+            }
+            
+            if (!currentImage || !currentSessionId || !currentFilename) {
+                showNotification('请先上传图片', 'error');
+                return;
+            }
+
+            showNotification('正在进行自动标注...', 'info');
+            
+            const confThreshold = parseFloat(document.getElementById('confidenceThreshold').value);
+            const iouThreshold = parseFloat(document.getElementById('iouThreshold').value);
+            const imgSize = parseInt(document.getElementById('inputSize').value);
+
+            const requestData = {
+                session_id: currentSessionId,
+                filename: currentFilename,
+                conf_threshold: confThreshold,
+                iou_threshold: iouThreshold,
+                img_size: imgSize,
+                selected_classes: selectedClassIds  // 传递选择的类别
+            };
+
+            fetch(`${API_BASE_URL}/predict`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showNotification(data.error, 'error');
+                    return;
+                }
+
+                // 转换API返回的检测结果为前端格式
+                annotations = data.detections.map(det => {
+                    const scaleX = canvas.width / data.image_shape[1];
+                    const scaleY = canvas.height / data.image_shape[0];
+                    
+                    const annotation = {
+                        id: det.id,
+                        class_id: det.class_id,
+                        class_name: det.class_name,
+                        confidence: det.confidence,
+                        bbox: [
+                            det.bbox.x1 * scaleX,
+                            det.bbox.y1 * scaleY,
+                            det.bbox.width * scaleX,
+                            det.bbox.height * scaleY
+                        ]
+                    };
+                    
+                    // 如果有分割数据，缩放多边形坐标
+                    if (det.segmentation && det.shape_type === 'polygon') {
+                        annotation.segmentation = det.segmentation.map(point => [
+                            point[0] * scaleX,
+                            point[1] * scaleY
+                        ]);
+                        annotation.shape_type = 'polygon';
+                    } else {
+                        annotation.shape_type = 'rectangle';
+                    }
+                    
+                    return annotation;
+                });
+                
+                // 更新标注状态
+                if (annotations.length > 0) {
+                    window.imageAnnotationStatus[currentFilename] = true;
+                    updateImageList(); // 更新图片列表显示
+                }
+                
+                redrawCanvas();
+                updateAnnotationList();
+                updateClassCounts();
+                
+                showNotification(`检测到 ${annotations.length} 个目标`, 'success');
+            })
+            .catch(error => {
+                showNotification('自动标注失败: ' + error.message, 'error');
+                console.error('Auto annotation failed:', error);
+            });
+        }
+
+        // 一键检测全部图片 - 自动轮播版本
+        function autoAnnotateAll() {
+            if (!currentModel) {
+                showNotification('请先上传模型', 'error');
+                return;
+            }
+            
+            if (!currentSessionId || !uploadedFiles.length) {
+                showNotification('请先上传图片文件', 'error');
+                return;
+            }
+
+            const imageFiles = uploadedFiles.filter(f => f.type === 'image');
+            if (imageFiles.length === 0) {
+                showNotification('没有可检测的图片文件', 'error');
+                return;
+            }
+
+            // 禁用按钮，防止重复点击
+            document.getElementById('autoAnnotateAllBtn').disabled = true;
+            
+            showNotification(`开始自动轮播检测（共${imageFiles.length}张）...`, 'info');
+            
+            // 开始自动轮播检测
+            startAutoCarouselDetection(imageFiles);
+        }
+
+        // 自动轮播检测变量
+        let carouselDetectionData = {
+            currentIndex: 0,
+            imageFiles: [],
+            totalDetections: 0,
+            classStats: {},
+            detectedImages: [],
+            emptyImages: [],
+            isPaused: false,
+            isRunning: false
+        };
+
+        // 开始自动轮播检测
+        function startAutoCarouselDetection(imageFiles) {
+            // 重置数据
+            carouselDetectionData = {
+                currentIndex: 0,
+                imageFiles: imageFiles,
+                totalDetections: 0,
+                classStats: {},
+                detectedImages: [],
+                emptyImages: [],
+                isPaused: false,
+                isRunning: true
+            };
+
+            // 显示暂停按钮，隐藏一键检测按钮
+            document.getElementById('autoAnnotateAllBtn').style.display = 'none';
+            document.getElementById('pauseResumeBtn').style.display = 'inline-flex';
+
+            // 显示第一张图片
+            if (imageFiles.length > 0) {
+                const firstImageIndex = uploadedFiles.findIndex(f => f.unique_filename === imageFiles[0].unique_filename);
+                if (firstImageIndex >= 0) {
+                    currentFileIndex = firstImageIndex;
+                    loadCurrentFile();
+                    updateImageBrowserInfo();
+                }
+                
+                // 开始检测流程
+                detectCurrentImageInCarousel();
+            }
+        }
+
+        // 暂停/继续检测
+        function pauseResumeDetection() {
+            const pauseBtn = document.getElementById('pauseResumeBtn');
+            
+            if (carouselDetectionData.isPaused) {
+                // 继续检测
+                carouselDetectionData.isPaused = false;
+                pauseBtn.innerHTML = '<i class="fas fa-pause"></i> 暂停';
+                showNotification('继续检测...', 'info');
+                
+                // 继续检测当前图片
+                detectCurrentImageInCarousel();
+            } else {
+                // 暂停检测
+                carouselDetectionData.isPaused = true;
+                pauseBtn.innerHTML = '<i class="fas fa-play"></i> 继续';
+                showNotification('检测已暂停', 'warning');
+            }
+        }
+
+        // 轮播检测当前图片
+        function detectCurrentImageInCarousel() {
+            const { currentIndex, imageFiles, isPaused, isRunning } = carouselDetectionData;
+            
+            // 检查是否暂停或停止
+            if (isPaused || !isRunning) {
+                return;
+            }
+            
+            if (currentIndex >= imageFiles.length) {
+                // 检测完成，显示最终结果
+                finishCarouselDetection();
+                return;
+            }
+
+            const currentImageFile = imageFiles[currentIndex];
+            const confThreshold = parseFloat(document.getElementById('confidenceThreshold').value);
+            const iouThreshold = parseFloat(document.getElementById('iouThreshold').value);
+            const imgSize = parseInt(document.getElementById('inputSize').value);
+
+            // 显示更详细的进度信息
+            const progressPercent = Math.round((currentIndex + 1) / imageFiles.length * 100);
+            const currentFile = imageFiles[currentIndex];
+            showNotification(`🔍 检测进度: ${currentIndex + 1}/${imageFiles.length} (${progressPercent}%)\n📄 当前文件: ${currentFile.filename || currentFile.name}`, 'info');
+
+            const requestData = {
+                session_id: currentSessionId,
+                filename: currentImageFile.unique_filename,
+                conf_threshold: confThreshold,
+                iou_threshold: iouThreshold,
+                img_size: imgSize,
+                selected_classes: selectedClassIds
+            };
+
+            fetch(`${API_BASE_URL}/predict`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 再次检查是否暂停
+                if (carouselDetectionData.isPaused || !carouselDetectionData.isRunning) {
+                    return;
+                }
+
+                if (data.error) {
+                    console.warn('检测失败:', data.error);
+                    moveToNextImageInCarousel();
+                    return;
+                }
+
+                // 转换检测结果
+                annotations = data.detections.map(det => {
+                    const scaleX = canvas.width / data.image_shape[1];
+                    const scaleY = canvas.height / data.image_shape[0];
+                    
+                    const annotation = {
+                        id: det.id,
+                        class_id: det.class_id,
+                        class_name: det.class_name,
+                        confidence: det.confidence,
+                        bbox: [
+                            det.bbox.x1 * scaleX,
+                            det.bbox.y1 * scaleY,
+                            det.bbox.width * scaleX,
+                            det.bbox.height * scaleY
+                        ]
+                    };
+                    
+                    // 如果有分割数据，缩放多边形坐标
+                    if (det.segmentation && det.shape_type === 'polygon') {
+                        annotation.segmentation = det.segmentation.map(point => [
+                            point[0] * scaleX,
+                            point[1] * scaleY
+                        ]);
+                        annotation.shape_type = 'polygon';
+                    } else {
+                        annotation.shape_type = 'rectangle';
+                    }
+                    
+                    return annotation;
+                });
+
+                // 更新显示
+                redrawCanvas();
+                updateAnnotationList();
+                updateClassCounts();
+
+                // 统计结果
+                carouselDetectionData.totalDetections += annotations.length;
+                if (annotations.length > 0) {
+                    carouselDetectionData.detectedImages.push(currentImageFile.filename);
+                    annotations.forEach(ann => {
+                        const className = ann.class_name;
+                        carouselDetectionData.classStats[className] = (carouselDetectionData.classStats[className] || 0) + 1;
+                    });
+                } else {
+                    carouselDetectionData.emptyImages.push(currentImageFile.filename);
+                }
+
+                // 根据设置的延时切换到下一张（除非暂停）
+                const carouselDelay = parseInt(document.getElementById('carouselDelay')?.value || '300');
+                
+                if (carouselDelay === 0) {
+                    // 即时切换，不等待
+                    if (!carouselDetectionData.isPaused && carouselDetectionData.isRunning) {
+                        moveToNextImageInCarousel();
+                    }
+                } else {
+                    // 按设定时间延时切换
+                    setTimeout(() => {
+                        if (!carouselDetectionData.isPaused && carouselDetectionData.isRunning) {
+                            moveToNextImageInCarousel();
+                        }
+                    }, carouselDelay);
+                }
+            })
+            .catch(error => {
+                console.error('检测失败:', error);
+                // 错误时也按照延时设置进行切换
+                const carouselDelay = parseInt(document.getElementById('carouselDelay')?.value || '300');
+                
+                if (carouselDelay === 0) {
+                    moveToNextImageInCarousel();
+                } else {
+                    setTimeout(() => {
+                        if (!carouselDetectionData.isPaused && carouselDetectionData.isRunning) {
+                            moveToNextImageInCarousel();
+                        }
+                    }, Math.min(carouselDelay, 500)); // 错误时最多等待0.5秒
+                }
+            });
+        }
+
+        // 移动到下一张图片
+        function moveToNextImageInCarousel() {
+            carouselDetectionData.currentIndex++;
+            
+            if (carouselDetectionData.currentIndex < carouselDetectionData.imageFiles.length) {
+                // 切换到下一张图片
+                const nextImageFile = carouselDetectionData.imageFiles[carouselDetectionData.currentIndex];
+                const nextImageIndex = uploadedFiles.findIndex(f => f.unique_filename === nextImageFile.unique_filename);
+                
+                if (nextImageIndex >= 0) {
+                    currentFileIndex = nextImageIndex;
+                    loadCurrentFile();
+                    updateImageBrowserInfo();
+                    
+                    // 等待图片加载后继续检测（减少等待时间）
+                    setTimeout(() => {
+                        detectCurrentImageInCarousel();
+                    }, 200);
+                }
+            } else {
+                // 检测完成
+                finishCarouselDetection();
+            }
+        }
+
+        // 完成轮播检测
+        function finishCarouselDetection() {
+            const { totalDetections, classStats, detectedImages, emptyImages, imageFiles } = carouselDetectionData;
+            
+            // 停止检测状态
+            carouselDetectionData.isRunning = false;
+            carouselDetectionData.isPaused = false;
+
+            // 恢复按钮状态
+            document.getElementById('autoAnnotateAllBtn').style.display = 'inline-flex';
+            document.getElementById('autoAnnotateAllBtn').disabled = false;
+            document.getElementById('pauseResumeBtn').style.display = 'none';
+            
+            // 构建结果消息
+            let resultMessage = `🎉 轮播检测完成！\n`;
+            resultMessage += `📊 共处理 ${imageFiles.length} 张图片\n`;
+            resultMessage += `✅ 检测到 ${totalDetections} 个目标\n`;
+            resultMessage += `📈 有目标的图片: ${detectedImages.length} 张\n`;
+            resultMessage += `📋 无目标的图片: ${emptyImages.length} 张`;
+
+            if (Object.keys(classStats).length > 0) {
+                const classStatsStr = Object.entries(classStats)
+                    .map(([cls, count]) => `${cls}: ${count}个`)
+                    .join(', ');
+                resultMessage += `\n🏷️ 检测详情: ${classStatsStr}`;
+            }
+
+            showNotification(resultMessage, 'success');
+            
+            // 更新右侧统计显示
+            updateDetectionStatistics(carouselDetectionData);
+            
+            // 停留在最后一张有检测结果的图片
+            if (detectedImages.length > 0) {
+                const lastDetectedFile = detectedImages[detectedImages.length - 1];
+                const lastDetectedIndex = uploadedFiles.findIndex(f => f.filename === lastDetectedFile);
+                if (lastDetectedIndex >= 0) {
+                    currentFileIndex = lastDetectedIndex;
+                    loadCurrentFile();
+                    updateImageBrowserInfo();
+                }
+            }
+        }
+
+        // 更新检测统计显示
+        function updateDetectionStatistics(data) {
+            const statisticsDiv = document.getElementById('detectionStatistics');
+            const statisticsContent = document.getElementById('statisticsContent');
+            
+            if (!data || data.totalDetections === 0) {
+                statisticsDiv.style.display = 'none';
+                return;
+            }
+
+            let content = '';
+            content += `<div style="margin-bottom: 8px;"><strong>📊 检测总览</strong></div>`;
+            content += `<div style="margin-bottom: 6px;">• 处理图片: <span style="color: #4299e1;">${data.imageFiles.length} 张</span></div>`;
+            content += `<div style="margin-bottom: 6px;">• 检测目标: <span style="color: #48bb78;">${data.totalDetections} 个</span></div>`;
+            content += `<div style="margin-bottom: 6px;">• 有目标图片: <span style="color: #ed8936;">${data.detectedImages.length} 张</span></div>`;
+            content += `<div style="margin-bottom: 10px;">• 无目标图片: <span style="color: #a0aec0;">${data.emptyImages.length} 张</span></div>`;
+
+            if (Object.keys(data.classStats).length > 0) {
+                content += `<div style="margin-bottom: 6px;"><strong>🏷️ 类别详情</strong></div>`;
+                Object.entries(data.classStats).forEach(([className, count]) => {
+                    content += `<div style="margin-bottom: 4px; margin-left: 8px;">• ${className}: <span style="color: #667eea;">${count} 个</span></div>`;
+                });
+            }
+
+            statisticsContent.innerHTML = content;
+            statisticsDiv.style.display = 'block';
+        }
+
+        // 加载当前图片的预测结果
+        function loadPredictionForCurrentImage() {
+            if (!currentModel || !currentSessionId || !currentFilename) {
+                return;
+            }
+
+            const confThreshold = parseFloat(document.getElementById('confidenceThreshold').value);
+            const iouThreshold = parseFloat(document.getElementById('iouThreshold').value);
+            const imgSize = parseInt(document.getElementById('inputSize').value);
+
+            const requestData = {
+                session_id: currentSessionId,
+                filename: currentFilename,
+                conf_threshold: confThreshold,
+                iou_threshold: iouThreshold,
+                img_size: imgSize,
+                selected_classes: selectedClassIds
+            };
+
+            fetch(`${API_BASE_URL}/predict`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.warn('加载预测结果失败:', data.error);
+                    return;
+                }
+
+                // 转换API返回的检测结果为前端格式
+                annotations = data.detections.map(det => {
+                    const scaleX = canvas.width / data.image_shape[1];
+                    const scaleY = canvas.height / data.image_shape[0];
+                    
+                    const annotation = {
+                        id: det.id,
+                        class_id: det.class_id,
+                        class_name: det.class_name,
+                        confidence: det.confidence,
+                        bbox: [
+                            det.bbox.x1 * scaleX,
+                            det.bbox.y1 * scaleY,
+                            det.bbox.width * scaleX,
+                            det.bbox.height * scaleY
+                        ]
+                    };
+                    
+                    // 如果有分割数据，缩放多边形坐标
+                    if (det.segmentation && det.shape_type === 'polygon') {
+                        annotation.segmentation = det.segmentation.map(point => [
+                            point[0] * scaleX,
+                            point[1] * scaleY
+                        ]);
+                        annotation.shape_type = 'polygon';
+                    } else {
+                        annotation.shape_type = 'rectangle';
+                    }
+                    
+                    return annotation;
+                });
+                
+                redrawCanvas();
+                updateAnnotationList();
+                updateClassCounts();
+            })
+            .catch(error => {
+                console.warn('加载预测结果失败:', error);
+            });
+        }
+
+        // 生成模拟标注数据
+        function generateMockAnnotations() {
+            const mockData = [];
+            const numObjects = Math.floor(Math.random() * 8) + 2;
+            
+            for (let i = 0; i < numObjects; i++) {
+                const classIndex = Math.floor(Math.random() * currentModel.classes.length);
+                const confidence = 0.5 + Math.random() * 0.4;
+                
+                const x = Math.random() * (canvas.width - 100);
+                const y = Math.random() * (canvas.height - 100);
+                const width = 50 + Math.random() * 150;
+                const height = 50 + Math.random() * 150;
+                
+                mockData.push({
+                    id: Date.now() + i,
+                    class_id: classIndex,
+                    class_name: currentModel.classes[classIndex],
+                    confidence: confidence,
+                    bbox: [x, y, width, height]
+                });
+            }
+            
+            return mockData;
+        }
+
+        // 重绘canvas
+        function redrawCanvas() {
+            if (!currentImage) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
+            
+            // 绘制标注
+            annotations.forEach((annotation, index) => {
+                const color = colors[annotation.class_id % colors.length];
+                
+                if (annotation.segmentation && annotation.shape_type === 'polygon') {
+                    // 绘制多边形
+                    const points = annotation.segmentation;
+                    if (points && points.length >= 3) {
+                        ctx.beginPath();
+                        ctx.moveTo(points[0][0], points[0][1]);
+                        for (let i = 1; i < points.length; i++) {
+                            ctx.lineTo(points[i][0], points[i][1]);
+                        }
+                        ctx.closePath();
+                        
+                        // 填充半透明颜色
+                        ctx.fillStyle = color + '40';  // 添加透明度
+                        ctx.fill();
+                        
+                        // 绘制边框
+                        ctx.strokeStyle = color;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                        
+                        // 绘制顶点
+                        points.forEach(point => {
+                            ctx.fillStyle = color;
+                            ctx.beginPath();
+                            ctx.arc(point[0], point[1], 4, 0, 2 * Math.PI);
+                            ctx.fill();
+                        });
+                        
+                        // 绘制标签（在多边形顶部）
+                        const minY = Math.min(...points.map(p => p[1]));
+                        const minX = Math.min(...points.map(p => p[0]));
+                        const label = `${annotation.class_name} ${(annotation.confidence * 100).toFixed(1)}%`;
+                        const textWidth = ctx.measureText(label).width;
+                        
+                        ctx.fillStyle = color;
+                        ctx.fillRect(minX, minY - 25, textWidth + 10, 25);
+                        ctx.fillStyle = 'white';
+                        ctx.font = '14px Arial';
+                        ctx.fillText(label, minX + 5, minY - 8);
+                    }
+                } else {
+                    // 绘制矩形边界框
+                    const [x, y, width, height] = annotation.bbox;
+                    
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, width, height);
+                    
+                    // 绘制标签
+                    const label = `${annotation.class_name} ${(annotation.confidence * 100).toFixed(1)}%`;
+                    const textWidth = ctx.measureText(label).width;
+                    
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x, y - 25, textWidth + 10, 25);
+                    ctx.fillStyle = 'white';
+                    ctx.font = '14px Arial';
+                    ctx.fillText(label, x + 5, y - 8);
+                }
+            });
+            
+            // 绘制当前正在绘制的多边形
+            if (isDrawingPolygon && polygonPoints.length > 0) {
+                ctx.strokeStyle = '#667eea';
+                ctx.fillStyle = '#667eea40';
+                ctx.lineWidth = 2;
+                
+                // 绘制已有的线段
+                ctx.beginPath();
+                ctx.moveTo(polygonPoints[0][0], polygonPoints[0][1]);
+                for (let i = 1; i < polygonPoints.length; i++) {
+                    ctx.lineTo(polygonPoints[i][0], polygonPoints[i][1]);
+                }
+                
+                // 如果有至少3个点，显示闭合效果
+                if (polygonPoints.length >= 3) {
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                ctx.stroke();
+                
+                // 绘制顶点
+                polygonPoints.forEach(point => {
+                    ctx.fillStyle = '#667eea';
+                    ctx.beginPath();
+                    ctx.arc(point[0], point[1], 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+            }
+        }
+
+        // 更新标注列表
+        function updateAnnotationList() {
+            const annotationList = document.getElementById('annotationList');
+            
+            if (annotations.length === 0) {
+                annotationList.innerHTML = '<p style="color: #a0aec0; text-align: center; padding: 20px;">暂无标注</p>';
+                return;
+            }
+            
+            annotationList.innerHTML = '';
+            
+            annotations.forEach((annotation, index) => {
+                const item = document.createElement('div');
+                item.className = 'annotation-item';
+                item.innerHTML = `
+                    <div class="annotation-details">
+                        <div class="annotation-class">${annotation.class_name}</div>
+                        <div class="annotation-confidence">置信度: ${(annotation.confidence * 100).toFixed(1)}%</div>
+                    </div>
+                    <div class="annotation-actions">
+                        <button class="btn btn-sm btn-danger" onclick="deleteAnnotation(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                annotationList.appendChild(item);
+            });
+        }
+
+        // 更新类别计数
+        function updateClassCounts() {
+            // 重置计数
+            currentModel.classes.forEach((_, index) => {
+                const countElement = document.getElementById(`count-${index}`);
+                if (countElement) countElement.textContent = '0';
+            });
+            
+            // 统计每个类别的数量
+            const counts = {};
+            annotations.forEach(annotation => {
+                counts[annotation.class_id] = (counts[annotation.class_id] || 0) + 1;
+            });
+            
+            // 更新显示
+            Object.keys(counts).forEach(classId => {
+                const countElement = document.getElementById(`count-${classId}`);
+                if (countElement) countElement.textContent = counts[classId];
+            });
+        }
+
+        // 删除标注
+        function deleteAnnotation(index) {
+            annotations.splice(index, 1);
+            redrawCanvas();
+            updateAnnotationList();
+            updateClassCounts();
+            
+            // 删除标注后自动保存
+            setTimeout(autoSaveProgress, 500);
+        }
+
+        // 清除当前标注
+        function clearAnnotations() {
+            annotations = [];
+            redrawCanvas();
+            updateAnnotationList();
+            updateClassCounts();
+            showNotification('当前标注已清除', 'success');
+        }
+
+        // 清除全部标注
+        function clearAllAnnotations() {
+            if (!currentSessionId) {
+                showNotification('请先上传文件', 'error');
+                return;
+            }
+
+            if (confirm('确定要清除所有文件的标注数据吗？此操作不可撤销。')) {
+                fetch(`${API_BASE_URL}/clear_all_annotations`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: currentSessionId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showNotification(data.error, 'error');
+                        return;
+                    }
+
+                    // 清除当前界面的标注
+                    annotations = [];
+                    redrawCanvas();
+                    updateAnnotationList();
+                    updateClassCounts();
+                    
+                    showNotification('所有标注数据已清除', 'success');
+                })
+                .catch(error => {
+                    showNotification('清除失败: ' + error.message, 'error');
+                    console.error('Clear all annotations failed:', error);
+                });
+            }
+        }
+
+        // 删除当前文件
+        function deleteCurrentFile() {
+            if (!currentSessionId || !currentFilename) {
+                showNotification('没有可删除的文件', 'error');
+                return;
+            }
+
+            const currentFile = uploadedFiles[currentFileIndex];
+            if (confirm(`确定要删除文件 "${currentFile.filename}" 吗？此操作不可撤销。`)) {
+                fetch(`${API_BASE_URL}/delete_file`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        session_id: currentSessionId,
+                        filename: currentFilename
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showNotification(data.error, 'error');
+                        return;
+                    }
+
+                    // 从本地文件列表中移除
+                    uploadedFiles.splice(currentFileIndex, 1);
+
+                    // 如果还有其他文件，切换到相邻文件
+                    if (uploadedFiles.length > 0) {
+                        // 调整当前索引
+                        if (currentFileIndex >= uploadedFiles.length) {
+                            currentFileIndex = uploadedFiles.length - 1;
+                        }
+                        loadCurrentFile();
+                        updateImageBrowserInfo();
+                    } else {
+                        // 没有文件了，重置界面
+                        currentFilename = null;
+                        currentFileIndex = 0;
+                        uploadedFiles = [];
+                        hideImageBrowser();
+                        
+                        // 显示占位符
+                        const canvas = document.getElementById('annotationCanvas');
+                        const video = document.getElementById('videoPlayer');
+                        const placeholder = document.getElementById('placeholder');
+                        
+                        canvas.style.display = 'none';
+                        video.style.display = 'none';
+                        placeholder.style.display = 'block';
+                        
+                        // 隐藏视频控制
+                        document.getElementById('videoControls').classList.add('hidden');
+                        
+                        // 清除标注
+                        annotations = [];
+                        updateAnnotationList();
+                        updateClassCounts();
+                    }
+
+                    showNotification(`文件 "${currentFile.filename}" 已删除`, 'success');
+                })
+                .catch(error => {
+                    showNotification('删除失败: ' + error.message, 'error');
+                    console.error('Delete file failed:', error);
+                });
+            }
+        }
+
+        // 导出标注数据
+        function exportAnnotations() {
+            if (annotations.length === 0) {
+                showNotification('没有标注数据可导出', 'error');
+                return;
+            }
+
+            if (!currentSessionId || !currentFilename) {
+                showNotification('缺少会话信息', 'error');
+                return;
+            }
+
+            const format = document.getElementById('exportFormat').value;
+            
+            showNotification('正在导出标注数据...', 'info');
+
+            // 转换前端标注格式为API格式
+            const apiAnnotations = annotations.map(ann => {
+                const annotation = {
+                    id: ann.id,
+                    class_id: ann.class_id,
+                    class_name: ann.class_name,
+                    confidence: ann.confidence,
+                    bbox: {
+                        x1: ann.bbox[0],
+                        y1: ann.bbox[1],
+                        x2: ann.bbox[0] + ann.bbox[2],
+                        y2: ann.bbox[1] + ann.bbox[3],
+                        width: ann.bbox[2],
+                        height: ann.bbox[3]
+                    }
+                };
+                
+                // 如果是多边形标注，添加segmentation和shape_type
+                if (ann.segmentation && ann.shape_type === 'polygon') {
+                    annotation.segmentation = ann.segmentation;
+                    annotation.shape_type = 'polygon';
+                } else {
+                    annotation.shape_type = 'rectangle';
+                }
+                
+                return annotation;
+            });
+
+            const requestData = {
+                session_id: currentSessionId,
+                filename: currentFilename,
+                format: format,
+                annotations: apiAnnotations
+            };
+
+            fetch(`${API_BASE_URL}/export_annotations`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('导出失败');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // 创建下载链接
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `annotations_${format}_${Date.now()}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showNotification('标注数据导出成功', 'success');
+            })
+            .catch(error => {
+                showNotification('导出失败: ' + error.message, 'error');
+                console.error('Export failed:', error);
+            });
+        }
+
+        // 删除全部文件
+        function deleteAllFiles() {
+            if (!uploadedFiles || uploadedFiles.length === 0) {
+                showNotification('没有文件可删除', 'warning');
+                return;
+            }
+
+            // 确认对话框
+            if (!confirm(`确定要删除全部 ${uploadedFiles.length} 个文件吗？此操作不可撤销。`)) {
+                return;
+            }
+
+            // 清理前端状态
+            currentImage = null;
+            currentVideo = null;
+            currentFilename = null;
+            currentFileIndex = 0;
+            annotations = [];
+            
+            // 隐藏显示元素
+            document.getElementById('annotationCanvas').style.display = 'none';
+            document.getElementById('videoPlayer').style.display = 'none';
+            document.getElementById('placeholder').style.display = 'block';
+            document.getElementById('videoControls').style.display = 'none';
+            
+            // 清空画布
+            if (canvas && ctx) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            // 更新UI
+            updateAnnotationList();
+            updateClassCounts();
+            hideImageBrowser();
+            
+            // 清除检测统计信息
+            document.getElementById('detectionStatistics').style.display = 'none';
+            
+            // 如果有会话ID，调用后端清理
+            if (currentSessionId) {
+                fetch(`${API_BASE_URL}/clear_session/${currentSessionId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.warn('后端清理失败:', data.error);
+                    } else {
+                        console.log('后端文件清理完成');
+                    }
+                })
+                .catch(error => {
+                    console.warn('后端清理失败:', error);
+                });
+            }
+            
+            // 清空文件数组
+            uploadedFiles = [];
+            currentSessionId = null;
+            
+            showNotification('已删除全部文件和服务器数据', 'success');
+        }
+
+        // 图片浏览器功能
+        function loadCurrentFile() {
+            if (!uploadedFiles || uploadedFiles.length === 0) return;
+            
+            const currentFile = uploadedFiles[currentFileIndex];
+            currentFilename = currentFile.unique_filename;
+            
+            if (currentFile.type === 'image') {
+                loadImageFromServer(currentFile);
+                
+                // 延迟加载预测结果，等待图片加载完成
+                setTimeout(() => {
+                    if (currentModel && currentSessionId && currentFilename) {
+                        loadPredictionForCurrentImage();
+                    }
+                }, 500); // 500ms延迟确保图片已加载
+            } else if (currentFile.type === 'video') {
+                loadVideoFromServer(currentFile);
+                // 清除视频的标注
+                annotations = [];
+                updateAnnotationList();
+                updateClassCounts();
+            }
+            
+            // 文件切换后自动保存当前状态
+            setTimeout(autoSaveProgress, 1000);
+        }
+
+        function showImageBrowser() {
+            document.getElementById('imageBrowserControls').style.display = 'block';
+        }
+
+        function hideImageBrowser() {
+            document.getElementById('imageBrowserControls').style.display = 'none';
+        }
+
+        function updateImageBrowserInfo() {
+            if (!uploadedFiles || uploadedFiles.length === 0) return;
+            
+            const imageInfo = document.getElementById('imageInfo');
+            const imageProgress = document.getElementById('imageProgress');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const autoAnnotateAllBtn = document.getElementById('autoAnnotateAllBtn');
+            
+            const currentFile = uploadedFiles[currentFileIndex];
+            imageInfo.textContent = `${currentFile.filename} (${currentFileIndex + 1}/${uploadedFiles.length})`;
+            
+            const progress = ((currentFileIndex + 1) / uploadedFiles.length) * 100;
+            imageProgress.style.width = progress + '%';
+            
+            prevBtn.disabled = currentFileIndex === 0;
+            nextBtn.disabled = currentFileIndex === uploadedFiles.length - 1;
+            
+            // 启用一键检测全部按钮（如果有模型和图片文件）
+            const imageFiles = uploadedFiles.filter(f => f.type === 'image');
+            autoAnnotateAllBtn.disabled = !currentModel || imageFiles.length === 0;
+        }
+
+        function previousImage() {
+            if (currentFileIndex > 0) {
+                currentFileIndex--;
+                loadCurrentFile();
+                updateImageBrowserInfo();
+                updateImageList(); // 更新图片列表的active状态
+            }
+        }
+
+        function nextImage() {
+            if (currentFileIndex < uploadedFiles.length - 1) {
+                currentFileIndex++;
+                loadCurrentFile();
+                updateImageBrowserInfo();
+                updateImageList(); // 更新图片列表的active状态
+            }
+        }
+
+        // 更新批量状态
+        function updateBatchStatus() {
+            const batchStatus = document.getElementById('batchStatus');
+            const batchProcessBtn = document.getElementById('batchProcessBtn');
+            
+            if (currentSessionId) {
+                batchStatus.textContent = '已准备好批量处理';
+                batchProcessBtn.disabled = !currentModel;
+            } else {
+                batchStatus.textContent = '请先上传文件';
+                batchProcessBtn.disabled = true;
+            }
+        }
+
+        // 批量处理相关函数
+        function selectBatchFiles() {
+            document.getElementById('batchFiles').click();
+        }
+        
+        function selectBatchFolder() {
+            document.getElementById('batchFolder').click();
+        }
+
+        function handleBatchFiles(event) {
+            const files = event.target.files;
+            if (files && files.length > 0) {
+                // 过滤出图片和视频文件
+                const mediaFiles = Array.from(files).filter(file => {
+                    const isImage = file.type.startsWith('image/');
+                    const isVideo = file.type.startsWith('video/');
+                    return isImage || isVideo;
+                });
+                
+                if (mediaFiles.length === 0) {
+                    showNotification('所选文件夹中没有找到图片或视频文件', 'error');
+                    return;
+                }
+                
+                // 创建一个新的FileList对象（实际上我们传递数组）
+                handleMediaFiles(mediaFiles);
+                
+                // 显示提示
+                if (mediaFiles.length < files.length) {
+                    const skipped = files.length - mediaFiles.length;
+                    showNotification(`已过滤 ${skipped} 个非媒体文件，选择了 ${mediaFiles.length} 个有效文件`, 'info');
+                }
+            }
+            
+            // 重置input，允许重复选择同一文件夹
+            event.target.value = '';
+        }
+
+        function processBatch() {
+            if (!currentModel || !currentSessionId) {
+                showNotification('请先上传模型和文件', 'error');
+                return;
+            }
+            
+            // 获取所有图片文件
+            const imageFiles = uploadedFiles.filter(f => f.type === 'image');
+            
+            if (imageFiles.length === 0) {
+                showNotification('没有可检测的图片文件', 'error');
+                return;
+            }
+            
+            // 初始化统计数据
+            batchProcessStats = {
+                processed: 0,
+                detected: 0,
+                empty: 0,
+                total: imageFiles.length
+            };
+            
+            showNotification('开始批量检测...', 'info');
+            showBatchStats();
+            updateBatchProgress(0);
+            
+            // 禁用按钮防止重复点击
+            const batchBtn = document.getElementById('batchProcessBtn');
+            batchBtn.disabled = true;
+            
+            // 启动进度条动画（模拟进度）
+            let simulatedProgress = 0;
+            const progressInterval = setInterval(() => {
+                if (simulatedProgress < 90) {
+                    // 平滑增长到90%
+                    simulatedProgress += Math.random() * 3;
+                    if (simulatedProgress > 90) simulatedProgress = 90;
+                    updateBatchProgress(simulatedProgress);
+                    
+                    // 估算当前处理数量
+                    const estimatedProcessed = Math.floor((simulatedProgress / 100) * imageFiles.length);
+                    document.getElementById('batchStatus').textContent = 
+                        `正在批量检测... 预计处理: ${estimatedProcessed}/${imageFiles.length}`;
+                }
+            }, 100);
+            
+            const confThreshold = parseFloat(document.getElementById('confidenceThreshold').value);
+            const iouThreshold = parseFloat(document.getElementById('iouThreshold').value);
+            const imgSize = parseInt(document.getElementById('inputSize').value);
+
+            const requestData = {
+                session_id: currentSessionId,
+                conf_threshold: confThreshold,
+                iou_threshold: iouThreshold,
+                img_size: imgSize,
+                selected_classes: selectedClassIds
+            };
+
+            fetch(`${API_BASE_URL}/batch_predict`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 停止进度动画
+                clearInterval(progressInterval);
+                
+                if (data.error) {
+                    showNotification(data.error, 'error');
+                    batchBtn.disabled = false;
+                    return;
+                }
+
+                // 统计结果并更新标注状态
+                batchProcessStats.processed = data.results.length;
+                batchProcessStats.detected = data.results.filter(r => r.count > 0).length;
+                batchProcessStats.empty = data.results.filter(r => r.count === 0).length;
+                
+                // 更新每个文件的标注状态
+                data.results.forEach(result => {
+                    if (result.count > 0) {
+                        window.imageAnnotationStatus[result.unique_filename] = true;
+                    }
+                });
+
+                // 快速完成进度条
+                updateBatchProgress(100);
+                updateBatchStatsDisplay();
+                
+                // 更新图片列表的标注状态
+                updateImageList();
+                
+                const totalDetections = data.results.reduce((sum, result) => sum + result.count, 0);
+                
+                document.getElementById('batchStatus').textContent = 
+                    `完成！处理了 ${data.results.length} 个文件，检测到 ${totalDetections} 个目标`;
+                
+                showNotification(`批量检测完成！有 ${batchProcessStats.empty} 张图片未检测到目标`, 'success');
+                
+                // 刷新当前图片的标注显示
+                if (currentFileIndex >= 0 && currentFileIndex < uploadedFiles.length) {
+                    loadCurrentFile();
+                }
+                
+                // 重新启用按钮
+                batchBtn.disabled = false;
+                
+                // 显示详细结果
+                setTimeout(() => {
+                    showNotification(`总共检测到 ${totalDetections} 个目标`, 'info');
+                }, 1000);
+            })
+            .catch(error => {
+                // 停止进度动画
+                clearInterval(progressInterval);
+                batchBtn.disabled = false;
+                showNotification('批量处理失败: ' + error.message, 'error');
+                console.error('Batch processing failed:', error);
+            });
+        }
+
+        // 显示批量处理统计信息
+        function showBatchStats() {
+            document.getElementById('batchStats').style.display = 'block';
+            updateBatchStatsDisplay();
+        }
+
+        // 更新批量处理进度
+        function updateBatchProgress(percentage) {
+            document.getElementById('batchProgress').style.width = percentage + '%';
+            document.getElementById('batchPercentage').textContent = Math.round(percentage) + '%';
+        }
+
+        // 更新批量处理统计显示
+        function updateBatchStatsDisplay() {
+            document.getElementById('processedCount').textContent = batchProcessStats.processed;
+            document.getElementById('detectedCount').textContent = batchProcessStats.detected;
+            document.getElementById('remainingCount').textContent = batchProcessStats.total - batchProcessStats.processed;
+            document.getElementById('emptyCount').textContent = batchProcessStats.empty;
+        }
+        
+        // 更新图片列表
+        function updateImageList() {
+            const imageListSection = document.getElementById('imageListSection');
+            const imageListContainer = document.getElementById('imageListContainer');
+            const imageListCount = document.getElementById('imageListCount');
+            
+            // 只显示图片文件
+            const imageFiles = uploadedFiles.filter(f => f.type === 'image');
+            
+            if (imageFiles.length === 0) {
+                imageListSection.style.display = 'none';
+                return;
+            }
+            
+            // 显示图片列表区域
+            imageListSection.style.display = 'block';
+            imageListCount.textContent = `${imageFiles.length}张`;
+            
+            // 清空列表
+            imageListContainer.innerHTML = '';
+            
+            // 为每个图片文件创建列表项
+            imageFiles.forEach((fileInfo, index) => {
+                // 找到该文件在uploadedFiles中的真实索引
+                const realIndex = uploadedFiles.indexOf(fileInfo);
+                
+                // 检查是否有标注数据
+                const hasAnnotations = checkImageHasAnnotations(fileInfo.unique_filename);
+                
+                const listItem = document.createElement('div');
+                listItem.className = 'image-list-item';
+                if (realIndex === currentFileIndex) {
+                    listItem.classList.add('active');
+                }
+                if (hasAnnotations) {
+                    listItem.classList.add('annotated');
+                }
+                
+                listItem.innerHTML = `
+                    <div class="image-status-icon${hasAnnotations ? ' annotated' : ''}">
+                        ${hasAnnotations ? '<i class="fas fa-check"></i>' : ''}
+                    </div>
+                    <div class="image-list-filename" title="${fileInfo.filename}">${fileInfo.filename}</div>
+                `;
+                
+                // 点击跳转到该图片
+                listItem.addEventListener('click', () => {
+                    jumpToImage(realIndex);
+                });
+                
+                imageListContainer.appendChild(listItem);
+            });
+        }
+        
+        // 检查图片是否有标注数据（从服务器缓存）
+        function checkImageHasAnnotations(uniqueFilename) {
+            // 这里需要通过某种方式检查服务器上是否有该图片的预测结果
+            // 暂时使用一个简单的方法：假设如果批量处理后，就会有数据
+            // 实际使用中可以通过一个全局对象存储每个文件的标注状态
+            return window.imageAnnotationStatus && window.imageAnnotationStatus[uniqueFilename];
+        }
+        
+        // 跳转到指定索引的图片
+        function jumpToImage(index) {
+            if (index < 0 || index >= uploadedFiles.length) {
+                return;
+            }
+            
+            // 如果是视频文件，跳过
+            if (uploadedFiles[index].type !== 'image') {
+                showNotification('只能查看图片文件', 'error');
+                return;
+            }
+            
+            currentFileIndex = index;
+            loadCurrentFile();
+            updateImageBrowserInfo();
+            updateImageList(); // 更新active状态
+        }
+        
+        // 初始化图片标注状态追踪
+        if (!window.imageAnnotationStatus) {
+            window.imageAnnotationStatus = {};
+        }
+
+        // 视频相关函数
+        function updateVideoTime() {
+            const video = document.getElementById('videoPlayer');
+            const currentTime = document.getElementById('currentTime');
+            
+            const minutes = Math.floor(video.currentTime / 60);
+            const seconds = Math.floor(video.currentTime % 60);
+            currentTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function extractFrame() {
+            if (!currentVideo) return;
+            
+            const video = currentVideo;
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            tempCanvas.width = video.videoWidth;
+            tempCanvas.height = video.videoHeight;
+            tempCtx.drawImage(video, 0, 0);
+            
+            // 将提取的帧转换为图片
+            tempCanvas.toBlob(blob => {
+                const file = new File([blob], `frame_${video.currentTime.toFixed(2)}s.jpg`, { type: 'image/jpeg' });
+                loadImage(file);
+            });
+            
+            showNotification('帧提取成功', 'success');
+        }
+
+        // 显示视频帧提取对话框
+        function showVideoExtractDialog() {
+            if (!currentFilename) {
+                showNotification('请先上传视频文件', 'error');
+                return;
+            }
+
+            const currentFile = uploadedFiles[currentFileIndex];
+            if (currentFile.type !== 'video') {
+                showNotification('当前文件不是视频', 'error');
+                return;
+            }
+
+            const dialogContent = `
+                <div style="text-align: left; line-height: 1.6;">
+                    <h3 style="color: #4a5568; margin-bottom: 15px;">🎬 视频帧提取设置</h3>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">帧提取间隔：</label>
+                        <select id="frameInterval" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                            <option value="1">每1帧提取一次（最密集）</option>
+                            <option value="2" selected>每2帧提取一次</option>
+                            <option value="5">每5帧提取一次</option>
+                            <option value="10">每10帧提取一次</option>
+                            <option value="15">每15帧提取一次</option>
+                            <option value="30">每30帧提取一次（稀疏）</option>
+                        </select>
+                    </div>
+
+                    <div style="padding: 15px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #0ea5e9; margin-bottom: 20px;">
+                        <strong>💡 提示：</strong><br>
+                        • 间隔越小，提取的图片越多，处理时间越长<br>
+                        • 建议先用较大间隔测试，再根据需要调整<br>
+                        • 120帧视频，间隔2帧 = 60张图片
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="startVideoExtraction()" class="btn" style="flex: 1;">
+                            <i class="fas fa-film"></i> 开始提取
+                        </button>
+                        <button onclick="closeModal()" class="btn btn-secondary" style="flex: 1;">
+                            取消
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            showModal(dialogContent);
+        }
+
+        // 开始视频帧提取
+        function startVideoExtraction() {
+            const frameInterval = parseInt(document.getElementById('frameInterval').value);
+            closeModal();
+
+            showNotification('正在提取视频帧...', 'info');
+
+            // 显示进度对话框
+            const progressContent = `
+                <div style="text-align: center; padding: 20px;">
+                    <h3 style="color: #4a5568; margin-bottom: 20px;">🎬 视频帧提取中</h3>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <div style="width: 300px; height: 20px; background: #e2e8f0; border-radius: 10px; overflow: hidden; margin: 0 auto;">
+                            <div id="extractProgress" style="width: 0%; height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.3s ease;"></div>
+                        </div>
+                        <p id="extractStatus" style="margin-top: 10px; color: #666;">准备中...</p>
+                        <p id="extractDetails" style="margin-top: 5px; color: #999; font-size: 12px;">正在分析视频...</p>
+                    </div>
+                    
+                    <button class="btn btn-danger btn-sm" onclick="cancelVideoExtraction()" id="cancelExtractBtn">
+                        <i class="fas fa-times"></i> 取消提取
+                    </button>
+                </div>
+            `;
+            
+            showModal(progressContent, false); // 不可关闭的模态框
+            
+            // 启动进度动画
+            startProgressAnimation();
+
+            fetch(`${API_BASE_URL}/extract_video_frames`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    session_id: currentSessionId,
+                    filename: currentFilename,
+                    frame_interval: frameInterval
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (extractionAborted) {
+                    return; // 如果已取消，不处理响应
+                }
+                
+                if (data.error) {
+                    closeModal();
+                    showNotification(data.error, 'error');
+                    return;
+                }
+
+                // 完成进度动画
+                completeProgressAnimation(data.extracted_count);
+
+                // 更新文件列表
+                uploadedFiles = uploadedFiles.concat(data.extracted_files || []);
+                
+                showNotification(
+                    `视频帧提取完成！共提取 ${data.extracted_count} 张图片（间隔${frameInterval}帧）`, 
+                    'success'
+                );
+
+                // 如果有提取的帧，显示浏览器控制
+                if (uploadedFiles.length > 1) {
+                    showImageBrowser();
+                    updateImageBrowserInfo();
+                }
+            })
+            .catch(error => {
+                closeModal();
+                showNotification('视频帧提取失败: ' + error.message, 'error');
+                console.error('Video frame extraction failed:', error);
+            });
+        }
+
+        // 视频提取相关变量
+        let extractionAborted = false;
+        let progressAnimationId = null;
+
+        // 启动进度动画
+        function startProgressAnimation() {
+            extractionAborted = false;
+            let progress = 0;
+            const progressBar = document.getElementById('extractProgress');
+            const statusText = document.getElementById('extractStatus');
+            const detailsText = document.getElementById('extractDetails');
+            
+            if (!progressBar) return;
+            
+            // 模拟进度动画
+            function animateProgress() {
+                if (extractionAborted) return;
+                
+                progress += Math.random() * 2; // 随机增加进度
+                if (progress > 90) progress = 90; // 最多到90%，等真实完成时到100%
+                
+                progressBar.style.width = progress + '%';
+                statusText.textContent = `提取进度: ${Math.round(progress)}%`;
+                
+                // 随机更新详细信息
+                const details = [
+                    '正在分析视频信息...',
+                    '正在读取视频帧...',
+                    '正在保存图片文件...',
+                    '正在处理视频数据...'
+                ];
+                detailsText.textContent = details[Math.floor(Math.random() * details.length)];
+                
+                if (progress < 90) {
+                    progressAnimationId = setTimeout(animateProgress, 500 + Math.random() * 1000);
+                }
+            }
+            
+            animateProgress();
+        }
+
+        // 取消视频提取
+        function cancelVideoExtraction() {
+            extractionAborted = true;
+            if (progressAnimationId) {
+                clearTimeout(progressAnimationId);
+            }
+            
+            closeModal();
+            showNotification('已取消视频帧提取', 'warning');
+        }
+
+        // 完成进度动画
+        function completeProgressAnimation(extractedCount) {
+            if (progressAnimationId) {
+                clearTimeout(progressAnimationId);
+            }
+            
+            const progressBar = document.getElementById('extractProgress');
+            const statusText = document.getElementById('extractStatus');
+            const detailsText = document.getElementById('extractDetails');
+            
+            if (progressBar) {
+                progressBar.style.width = '100%';
+                statusText.textContent = '提取完成！';
+                detailsText.textContent = `成功提取 ${extractedCount} 张图片`;
+                
+                setTimeout(() => {
+                    closeModal();
+                }, 1500); // 1.5秒后自动关闭
+            }
+        }
+
+        // 显示模态框
+        function showModal(content, closable = true) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: rgba(0,0,0,0.5); z-index: 10000; display: flex; 
+                align-items: center; justify-content: center;
+            `;
+            
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: white; padding: 30px; border-radius: 15px; 
+                max-width: 500px; max-height: 80vh; overflow-y: auto;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            `;
+            modalContent.innerHTML = content;
+            
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+            
+            // 点击背景关闭（如果允许）
+            if (closable) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        closeModal();
+                    }
+                });
+            }
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => modal.remove());
+        }
+
+        function autoAnnotateVideo() {
+            if (!currentFilename) {
+                showNotification('请先上传视频文件', 'error');
+                return;
+            }
+
+            const currentFile = uploadedFiles[currentFileIndex];
+            if (currentFile.type !== 'video') {
+                showNotification('当前文件不是视频', 'error');
+                return;
+            }
+
+            if (confirm('是否先提取视频帧，然后进行批量标注？')) {
+                showVideoExtractDialog();
+            }
+        }
+
+        // 导出完整数据集
+        function exportDataset() {
+            showNotification('正在准备导出完整数据集...', 'info');
+            
+            const datasetName = document.getElementById('datasetName').value || 'my_yolo_dataset';
+            const includeImages = document.getElementById('includeImages').checked;
+            const format = document.getElementById('exportFormat').value;
+            
+            const requestData = {
+                format: format,
+                include_images: includeImages,
+                dataset_name: datasetName
+            };
+
+            fetch(`${API_BASE_URL}/export_dataset`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || '导出失败');
+                    });
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // 创建下载链接
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${datasetName}_${format}_dataset.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showNotification('完整数据集导出成功！', 'success');
+            })
+            .catch(error => {
+                showNotification('数据集导出失败: ' + error.message, 'error');
+                console.error('Dataset export failed:', error);
+            });
+        }
+
+        // Canvas绘图功能
+        function startDrawing(e) {
+            if (!currentImage) return;
+            
+            // 多边形模式下不使用拖拽绘制
+            if (annotationMode === 'polygon') {
+                return;
+            }
+            
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            startX = e.clientX - rect.left;
+            startY = e.clientY - rect.top;
+        }
+
+        function draw(e) {
+            if (!currentImage) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+            
+            if (annotationMode === 'rectangle' && isDrawing) {
+                // 矩形模式：绘制拖拽的框
+                redrawCanvas();
+                ctx.strokeStyle = '#667eea';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(startX, startY, currentX - startX, currentY - startY);
+            } else if (annotationMode === 'polygon' && isDrawingPolygon && polygonPoints.length > 0) {
+                // 多边形模式：显示从最后一个点到鼠标的线
+                redrawCanvas();
+                const lastPoint = polygonPoints[polygonPoints.length - 1];
+                ctx.strokeStyle = '#667eea';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(lastPoint[0], lastPoint[1]);
+                ctx.lineTo(currentX, currentY);
+                ctx.stroke();
+            }
+        }
+
+        function stopDrawing(e) {
+            if (!currentImage) return;
+            
+            // 多边形模式下不使用此函数
+            if (annotationMode === 'polygon') {
+                return;
+            }
+            
+            if (!isDrawing) return;
+            
+            isDrawing = false;
+            const rect = canvas.getBoundingClientRect();
+            const endX = e.clientX - rect.left;
+            const endY = e.clientY - rect.top;
+            
+            const width = Math.abs(endX - startX);
+            const height = Math.abs(endY - startY);
+            
+            if (width > 10 && height > 10) {
+                const manualClassInput = document.getElementById('manualAnnotationClass');
+                const inputClassName = manualClassInput.value.trim();
+                
+                // 查找是否是已知类别
+                let selectedClassId = -1;
+                if (classes && classes.length > 0) {
+                    const knownClassIndex = classes.findIndex(cls => cls.toLowerCase() === inputClassName.toLowerCase());
+                    if (knownClassIndex >= 0) {
+                        selectedClassId = knownClassIndex;
+                    }
+                }
+                
+                // 如果是自定义类别，生成一个唯一ID
+                if (selectedClassId === -1) {
+                    selectedClassId = 1000 + Date.now() % 10000;
+                }
+                
+                // 创建矩形标注
+                const newAnnotation = {
+                    id: Date.now(),
+                    class_id: selectedClassId,
+                    class_name: inputClassName || 'unknown',
+                    confidence: 1.0,
+                    bbox: [Math.min(startX, endX), Math.min(startY, endY), width, height],
+                    shape_type: 'rectangle'
+                };
+                
+                annotations.push(newAnnotation);
+                updateAnnotationList();
+                updateClassCounts();
+                setTimeout(autoSaveProgress, 500);
+            }
+            
+            redrawCanvas();
+        }
+
+        function handleCanvasClick(e) {
+            if (!currentImage || annotationMode !== 'polygon') return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // 检查是否点击到第一个点附近（闭合多边形）
+            if (polygonPoints.length >= 3) {
+                const firstPoint = polygonPoints[0];
+                const dist = Math.sqrt((x - firstPoint[0]) ** 2 + (y - firstPoint[1]) ** 2);
+                if (dist < 10) {
+                    finishPolygon();
+                    return;
+                }
+            }
+            
+            // 添加新点
+            polygonPoints.push([x, y]);
+            if (!isDrawingPolygon) {
+                isDrawingPolygon = true;
+            }
+            
+            redrawCanvas();
+        }
+
+        function finishPolygon(e) {
+            if (!currentImage || annotationMode !== 'polygon' || polygonPoints.length < 3) {
+                return;
+            }
+            
+            // 创建多边形标注
+            const manualClassInput = document.getElementById('manualAnnotationClass');
+            const inputClassName = manualClassInput.value.trim();
+            
+            let selectedClassId = -1;
+            if (classes && classes.length > 0) {
+                const knownClassIndex = classes.findIndex(cls => cls.toLowerCase() === inputClassName.toLowerCase());
+                if (knownClassIndex >= 0) {
+                    selectedClassId = knownClassIndex;
+                }
+            }
+            
+            if (selectedClassId === -1) {
+                selectedClassId = 1000 + Date.now() % 10000;
+            }
+            
+            // 计算边界框（用于兼容性）
+            const xs = polygonPoints.map(p => p[0]);
+            const ys = polygonPoints.map(p => p[1]);
+            const minX = Math.min(...xs);
+            const maxX = Math.max(...xs);
+            const minY = Math.min(...ys);
+            const maxY = Math.max(...ys);
+            
+            const newAnnotation = {
+                id: Date.now(),
+                class_id: selectedClassId,
+                class_name: inputClassName || 'unknown',
+                confidence: 1.0,
+                bbox: [minX, minY, maxX - minX, maxY - minY],
+                segmentation: [...polygonPoints],  // 复制点数组
+                shape_type: 'polygon'
+            };
+            
+            annotations.push(newAnnotation);
+            updateAnnotationList();
+            updateClassCounts();
+            setTimeout(autoSaveProgress, 500);
+            
+            // 重置多边形状态
+            polygonPoints = [];
+            isDrawingPolygon = false;
+            
+            redrawCanvas();
+            showNotification('多边形标注已添加', 'success');
+        }
+
+        // 键盘快捷键处理
+        function handleKeyDown(event) {
+            // 多边形模式下的特殊按键
+            if (annotationMode === 'polygon' && isDrawingPolygon) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    finishPolygon();
+                    return;
+                } else if (event.key === 'Escape') {
+                    event.preventDefault();
+                    polygonPoints = [];
+                    isDrawingPolygon = false;
+                    redrawCanvas();
+                    showNotification('已取消多边形标注', 'info');
+                    return;
+                }
+            }
+            
+            // 忽略在输入框中的按键
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.tagName === 'SELECT') {
+                return;
+            }
+
+            switch(event.key) {
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    if (uploadedFiles.length > 1) {
+                        previousImage();
+                    }
+                    break;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    if (uploadedFiles.length > 1) {
+                        nextImage();
+                    }
+                    break;
+                case ' ':  // 空格键
+                    event.preventDefault();
+                    if (currentModel && currentImage) {
+                        autoAnnotate();
+                    }
+                    break;
+                case 'Delete':
+                case 'Backspace':
+                    event.preventDefault();
+                    clearAnnotations();
+                    break;
+                case 'a':
+                case 'A':
+                    if (event.ctrlKey) {
+                        event.preventDefault();
+                        toggleSelectAll();
+                    }
+                    break;
+                case 's':
+                case 'S':
+                    if (event.ctrlKey) {
+                        event.preventDefault();
+                        if (annotations.length > 0) {
+                            exportAnnotations();
+                        }
+                    }
+                    break;
+                case 'h':
+                case 'H':
+                    event.preventDefault();
+                    showShortcutsHelp();
+                    break;
+            }
+        }
+
+        // 显示快捷键帮助
+        function showShortcutsHelp() {
+            const helpContent = `
+                <div style="text-align: left; line-height: 1.6;">
+                    <h3 style="color: #4a5568; margin-bottom: 15px;">⌨️ 键盘快捷键</h3>
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px; font-size: 14px;">
+                        <strong>←/→</strong><span>上一张/下一张图片</span>
+                        <strong>空格</strong><span>自动标注</span>
+                        <strong>Delete</strong><span>清除标注</span>
+                        <strong>Ctrl+A</strong><span>全选/取消类别</span>
+                        <strong>Ctrl+S</strong><span>导出标注</span>
+                        <strong>H</strong><span>显示帮助</span>
+                    </div>
+                    <div style="margin-top: 15px; padding: 10px; background: #f0fff4; border-radius: 6px; font-size: 12px;">
+                        <strong>💡 提示：</strong>在输入框中时快捷键会被禁用
+                    </div>
+                </div>
+            `;
+            
+            // 创建模态对话框
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: rgba(0,0,0,0.5); z-index: 10000; display: flex; 
+                align-items: center; justify-content: center;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white; padding: 30px; border-radius: 15px; 
+                max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            `;
+            content.innerHTML = helpContent + 
+                '<button onclick="this.closest(\'.modal\').remove()" class="btn" style="margin-top: 20px; width: 100%;">关闭</button>';
+            
+            modal.className = 'modal';
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            // 点击背景关闭
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
+        // 自动保存功能
+        function autoSaveProgress() {
+            if (currentSessionId) {
+                const saveData = {
+                    sessionId: currentSessionId,
+                    filename: currentFilename,
+                    annotations: annotations || [],
+                    uploadedFiles: uploadedFiles || [],
+                    currentFileIndex: currentFileIndex || 0,
+                    selectedClassIds: selectedClassIds || [],
+                    currentModel: currentModel,
+                    timestamp: new Date().toISOString()
+                };
+                
+                localStorage.setItem('yolo_tool_autosave', JSON.stringify(saveData));
+                console.log('✅ 自动保存完成:', new Date().toLocaleTimeString());
+            }
+        }
+
+        // 恢复自动保存的进度
+        function restoreAutoSave() {
+            try {
+                const saved = localStorage.getItem('yolo_tool_autosave');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    const saveTime = new Date(data.timestamp);
+                    const timeDiff = (new Date() - saveTime) / (1000 * 60); // 分钟
+                    
+                    if (timeDiff < 60) { // 60分钟内的自动保存
+                        const timeText = timeDiff < 1 ? '刚才' : `${timeDiff.toFixed(0)} 分钟前`;
+                        const hasData = (data.annotations && data.annotations.length > 0) || 
+                                       (data.uploadedFiles && data.uploadedFiles.length > 0);
+                        
+                        if (hasData) {
+                            const message = `发现 ${timeText} 的自动保存，是否恢复？\n包含：${data.annotations?.length || 0} 个标注，${data.uploadedFiles?.length || 0} 个文件`;
+                            
+                            if (confirm(message)) {
+                                console.log('🔄 开始恢复自动保存数据...');
+                                
+                                // 恢复基本状态
+                                annotations = data.annotations || [];
+                                currentSessionId = data.sessionId;
+                                currentFilename = data.filename;
+                                uploadedFiles = data.uploadedFiles || [];
+                                currentFileIndex = data.currentFileIndex || 0;
+                                selectedClassIds = data.selectedClassIds || [];
+                                currentModel = data.currentModel;
+                                
+                                // 如果有文件，恢复显示
+                                if (uploadedFiles.length > 0) {
+                                    console.log('📁 恢复文件列表:', uploadedFiles.length, '个文件');
+                                    
+                                    // 显示图片浏览器（如果有多个文件）
+                                    if (uploadedFiles.length > 1) {
+                                        showImageBrowser();
+                                        updateImageBrowserInfo();
+                                    }
+                                    
+                                    // 加载当前文件
+                                    loadCurrentFile();
+                                }
+                                
+                                // 更新UI
+                                updateAnnotationList();
+                                updateClassCounts();
+                                
+                                // 如果有标注且有当前图片，重绘canvas
+                                if (annotations.length > 0) {
+                                    setTimeout(() => {
+                                        if (currentImage) {
+                                            redrawCanvas();
+                                            console.log('🎨 重绘了', annotations.length, '个标注');
+                                        }
+                                    }, 1000);
+                                }
+                                
+                                const statsText = `已恢复：${annotations.length} 个标注，${uploadedFiles.length} 个文件`;
+                                showNotification(statsText, 'success');
+                                console.log('✅ 自动保存恢复完成');
+                            }
+                        }
+                    } else {
+                        // 清除过期的自动保存
+                        localStorage.removeItem('yolo_tool_autosave');
+                        console.log('🗑️ 清除过期的自动保存数据');
+                    }
+                }
+            } catch (e) {
+                console.warn('恢复自动保存失败:', e);
+                showNotification('恢复自动保存失败', 'error');
+            }
+        }
+
+        // 通知系统
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            // 支持多行文本：将换行符转换为<br>标签
+            const formattedMessage = message.replace(/\n/g, '<br>');
+            
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}"></i>
+                ${formattedMessage}
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+            
+            // 触发自动保存
+            if (type === 'success' || (currentSessionId && (annotations.length > 0 || uploadedFiles.length > 0))) {
+                setTimeout(autoSaveProgress, 1000);
+            }
+        }
+
+        // 页面加载时恢复自动保存
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(restoreAutoSave, 1000);
+        });
+        
+        // 页面卸载前自动保存
+        window.addEventListener('beforeunload', function(e) {
+            if (currentSessionId && (annotations.length > 0 || uploadedFiles.length > 0)) {
+                autoSaveProgress();
+                console.log('💾 页面退出前自动保存完成');
+            }
+        });
+        
+        // 定期自动保存（每5分钟）
+        setInterval(function() {
+            if (currentSessionId && (annotations.length > 0 || uploadedFiles.length > 0)) {
+                autoSaveProgress();
+                console.log('⏰ 定时自动保存完成');
+            }
+        }, 5 * 60 * 1000); // 5分钟
+
+        // 显示版本信息
+        // 清除当前会话的所有文件
+        function clearCurrentSession() {
+            if (!currentSessionId || !uploadedFiles || uploadedFiles.length === 0) {
+                showNotification('没有当前会话文件可清除', 'warning');
+                return;
+            }
+
+            if (!confirm(`确定要清除当前上传的 ${uploadedFiles.length} 个文件吗？此操作不可撤销。`)) {
+                return;
+            }
+
+            showNotification('正在清除当前会话文件...', 'info');
+
+            fetch(`${API_BASE_URL}/clear_session/${currentSessionId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showNotification(data.error, 'error');
+                    return;
+                }
+
+                // 清理前端状态
+                currentImage = null;
+                currentVideo = null;
+                currentFilename = null;
+                currentFileIndex = 0;
+                annotations = [];
+                uploadedFiles = [];
+                window.imageAnnotationStatus = {};
+                
+                // 隐藏显示元素
+                document.getElementById('annotationCanvas').style.display = 'none';
+                document.getElementById('videoPlayer').style.display = 'none';
+                document.getElementById('placeholder').style.display = 'block';
+                document.getElementById('videoControls').style.display = 'none';
+                
+                // 清空画布
+                if (canvas && ctx) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+                
+                // 更新UI
+                updateAnnotationList();
+                updateClassCounts();
+                hideImageBrowser();
+                document.getElementById('detectionStatistics').style.display = 'none';
+                
+                showNotification('当前会话文件已清除', 'success');
+            })
+            .catch(error => {
+                showNotification('清除失败: ' + error.message, 'error');
+                console.error('清除当前会话失败:', error);
+            });
+        }
+
+        // 清除uploads文件夹的所有文件
+        function clearAllUploads() {
+            if (!confirm('⚠️ 警告：此操作将删除uploads文件夹中的所有文件！\n\n确定要继续吗？此操作不可撤销。')) {
+                return;
+            }
+
+            // 二次确认
+            if (!confirm('最后确认：真的要清空整个uploads文件夹吗？')) {
+                return;
+            }
+
+            showNotification('正在清空uploads文件夹...', 'info');
+
+            fetch(`${API_BASE_URL}/clear_all_uploads`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('清空结果:', data);
+                
+                if (data.error) {
+                    showNotification('清空失败: ' + data.error, 'error');
+                    console.error('清空失败:', data.error);
+                    return;
+                }
+
+                // 清理前端状态
+                currentImage = null;
+                currentVideo = null;
+                currentFilename = null;
+                currentSessionId = null;
+                currentFileIndex = 0;
+                annotations = [];
+                uploadedFiles = [];
+                window.imageAnnotationStatus = {};
+                
+                // 隐藏显示元素
+                document.getElementById('annotationCanvas').style.display = 'none';
+                document.getElementById('videoPlayer').style.display = 'none';
+                document.getElementById('placeholder').style.display = 'block';
+                document.getElementById('videoControls').style.display = 'none';
+                
+                // 清空画布
+                if (canvas && ctx) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+                
+                // 更新UI
+                updateAnnotationList();
+                updateClassCounts();
+                hideImageBrowser();
+                document.getElementById('detectionStatistics').style.display = 'none';
+                
+                // 显示结果
+                let message = data.message || '清空完成';
+                if (data.failed_files && data.failed_files.length > 0) {
+                    message += '\n\n部分文件删除失败:\n' + data.failed_files.slice(0, 5).join('\n');
+                    showNotification(message, 'warning');
+                    console.warn('失败的文件:', data.failed_files);
+                } else {
+                    showNotification(message, 'success');
+                }
+            })
+            .catch(error => {
+                const errorMsg = '清空失败: ' + error.message;
+                showNotification(errorMsg, 'error');
+                console.error('清空uploads文件夹失败:', error);
+            });
+        }
+
+        function showVersionInfo() {
+            const versionContent = `
+                <div style="text-align: left; line-height: 1.6;">
+                    <h3 style="color: #4a5568; margin-bottom: 15px;">🚀 YOLOv智能标注工具 v2.0</h3>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: #667eea; margin-bottom: 10px;">✨ 新增功能</h4>
+                        <ul style="font-size: 14px; padding-left: 20px;">
+                            <li>🖼️ 图片浏览器（上一张/下一张）</li>
+                            <li>📁 选择现有模型文件</li>
+                            <li>🎯 选择性自动标注</li>
+                            <li>📊 详细批量处理进度</li>
+                            <li>📦 完整数据集导出</li>
+                            <li>⌨️ 键盘快捷键支持</li>
+                            <li>💾 自动保存/恢复</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: #667eea; margin-bottom: 10px;">📋 支持格式</h4>
+                        <div style="font-size: 14px;">
+                            <strong>模型：</strong>YOLOv5, YOLOv8 (.pt)<br>
+                            <strong>图片：</strong>JPG, PNG, BMP, WEBP<br>
+                            <strong>视频：</strong>MP4, AVI, MOV<br>
+                            <strong>导出：</strong>YOLO JSON, COCO JSON, YOLO TXT, Pascal VOC
+                        </div>
+                    </div>
+
+                    <div style="padding: 15px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #0ea5e9;">
+                        <strong>🎯 使用提示：</strong><br>
+                        • 支持批量处理和选择性标注<br>
+                        • 可同时管理多个会话<br>
+                        • 自动保存防止数据丢失<br>
+                        • 键盘快捷键提高效率
+                    </div>
+                </div>
+            `;
+            
+            // 创建模态对话框
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: rgba(0,0,0,0.5); z-index: 10000; display: flex; 
+                align-items: center; justify-content: center;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white; padding: 30px; border-radius: 15px; 
+                max-width: 600px; max-height: 80vh; overflow-y: auto;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            `;
+            content.innerHTML = versionContent + 
+                '<button onclick="this.closest(\'.modal\').remove()" class="btn" style="margin-top: 20px; width: 100%;">关闭</button>';
+            
+            modal.className = 'modal';
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            // 点击背景关闭
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+    </script>
+</body>
+</html>

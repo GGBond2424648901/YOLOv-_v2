@@ -1,0 +1,48 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 5000,
+    "debug": true
+  },
+  "paths": {
+    "upload_folder": "uploads",
+    "models_folder": "models", 
+    "results_folder": "results"
+  },
+  "model": {
+    "default_confidence_threshold": 0.5,
+    "default_iou_threshold": 0.45,
+    "default_input_size": 640,
+    "supported_formats": [".pt"],
+    "max_model_size_mb": 500
+  },
+  "media": {
+    "supported_image_formats": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff"],
+    "supported_video_formats": [".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv"],
+    "max_file_size_mb": 100,
+    "max_batch_files": 50
+  },
+  "export": {
+    "supported_formats": ["yolo_json", "coco_json", "yolo_txt", "pascal_voc"],
+    "default_format": "yolo_json"
+  },
+  "ui": {
+    "max_canvas_width": 1200,
+    "max_canvas_height": 800,
+    "annotation_colors": [
+      "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FECA57",
+      "#FF9FF3", "#54A0FF", "#5F27CD", "#00D2D3", "#FF9F43",
+      "#10AC84", "#EE5A24", "#0652DD", "#9980FA", "#EA2027"
+    ]
+  },
+  "security": {
+    "max_session_duration_hours": 24,
+    "auto_cleanup_enabled": true,
+    "cleanup_interval_hours": 6
+  },
+  "performance": {
+    "use_gpu": true,
+    "batch_size": 1,
+    "num_workers": 4
+  }
+}

@@ -1,0 +1,23 @@
+# YOLOv智能标注工具依赖包
+# 核心框架
+Flask==2.3.3
+Flask-CORS==4.0.0
+
+# 图像和视频处理
+opencv-python==4.8.1.78
+Pillow==10.0.1
+numpy==1.24.3
+
+# 深度学习框架
+torch>=1.13.0
+torchvision>=0.14.0
+ultralytics>=8.0.0
+
+# 文件处理
+Werkzeug==2.3.7
+
+# 开发和调试
+requests==2.31.0
+
+# 安装说明：
+# pip install -r requirements.txt
